@@ -1,7 +1,7 @@
 service uprobestats /system/bin/uprobestats ${uprobestats.start_with_config}
     disabled
-    user system
-    group system readproc
+    user uprobestats
+    group uprobestats readproc
     oneshot
     capabilities PERFMON
 

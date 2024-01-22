@@ -19,11 +19,11 @@
 #include <stdint.h>
 #include <bpf_helpers.h>
 
-DEFINE_BPF_RINGBUF_EXT(output_buf, __u64, 4096, AID_SYSTEM, AID_SYSTEM, 0600, "", "", PRIVATE,
-                       BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG, LOAD_ON_USER,
+DEFINE_BPF_RINGBUF_EXT(output_buf, __u64, 4096, AID_UPROBESTATS, AID_UPROBESTATS, 0600, "", "",
+                       PRIVATE, BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG, LOAD_ON_USER,
                        LOAD_ON_USERDEBUG);
 
-DEFINE_BPF_PROG("uprobe/bitmap_constructor_heap", AID_SYSTEM, AID_SYSTEM, BPF_KPROBE2)
+DEFINE_BPF_PROG("uprobe/bitmap_constructor_heap", AID_UPROBESTATS, AID_UPROBESTATS, BPF_KPROBE2)
 (void* this_ptr, void* buffer_address, __u32 size) {
     __u64* output = bpf_output_buf_reserve();
     if (output == NULL) return 1;

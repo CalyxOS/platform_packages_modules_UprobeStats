@@ -40,7 +40,7 @@ int readConfig(std::string configFilePath, std::string* filename, int* offset) {
         return -1;
     }
     *filename = config_fields[0];
-    if (!android::base::ParseInt(config_fields[1], offset)) {
+    if (!android::base::ParseInt(android::base::Trim(config_fields[1]), offset)) {
         return -1;
     }
     return 0;

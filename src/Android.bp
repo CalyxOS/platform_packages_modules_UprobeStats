@@ -37,4 +37,7 @@ cc_binary {
     init_rc: [
         "UprobeStats.rc",
     ],
+    required: [
+        "BitmapAllocation.o",
+    ],
 }
