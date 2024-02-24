@@ -2,6 +2,17 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+aconfig_declarations {
+    name: "uprobestats_flags",
+    package: "android.uprobestats.flags",
+    srcs: ["flag.aconfig"],
+}
+
+cc_aconfig_library {
+    name: "uprobestats_flags_c_lib",
+    aconfig_declarations: "uprobestats_flags",
+}
+
 cc_library {
     name: "libuprobestats",
     srcs: [
@@ -29,6 +40,7 @@ cc_binary {
     static_libs: [
         "libc++fs",
         "libuprobestats",
+        "uprobestats_flags_c_lib",
     ],
     shared_libs: [
         "libbase",

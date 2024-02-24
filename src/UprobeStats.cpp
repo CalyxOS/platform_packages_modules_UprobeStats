@@ -20,6 +20,7 @@
 #include <android-base/logging.h>
 #include <android-base/parseint.h>
 #include <android-base/strings.h>
+#include <android_uprobestats_flags.h>
 
 #include <string>
 
@@ -47,7 +48,12 @@ int readConfig(std::string configFilePath, std::string* filename, int* offset) {
 }
 
 int main(int argc, char **argv) {
+    if (!android::uprobestats::flags::enable_uprobestats()) {
+        LOG(ERROR) << "uprobestats disabled by flag. Exiting.";
+        return 1;
+    }
     if (argc < 2) {
+        LOG(ERROR) << "Not enough command line arguments. Exiting.";
         return 1;
     }
     std::string filename;
