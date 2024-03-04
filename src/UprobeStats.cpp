@@ -19,6 +19,7 @@
 #include <android-base/file.h>
 #include <android-base/logging.h>
 #include <android-base/parseint.h>
+#include <android-base/properties.h>
 #include <android-base/strings.h>
 #include <android_uprobestats_flags.h>
 
@@ -47,7 +48,17 @@ int readConfig(std::string configFilePath, std::string* filename, int* offset) {
     return 0;
 }
 
+bool isUserBuild() {
+    return android::base::GetProperty("ro.build.type", "unknown") == "user";
+}
+
 int main(int argc, char **argv) {
+    if (isUserBuild()) {
+        // TODO(296108553): See if we could avoid shipping this binary on user
+        // builds.
+        LOG(ERROR) << "uprobestats disabled on user build. Exiting.";
+        return 1;
+    }
     if (!android::uprobestats::flags::enable_uprobestats()) {
         LOG(ERROR) << "uprobestats disabled by flag. Exiting.";
         return 1;
