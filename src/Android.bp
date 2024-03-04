@@ -18,6 +18,7 @@ cc_library {
     srcs: [
         "BpfUtilities.cpp",
         "ProcessInfoRetriever.cpp",
+        "config.proto",
     ],
     header_libs: [
         "bpf_headers",
@@ -30,6 +31,10 @@ cc_library {
     static_libs: [
         "libc++fs",
     ],
+    proto: {
+        export_proto_headers: true,
+        type: "lite",
+    },
 }
 
 cc_binary {
@@ -39,6 +44,7 @@ cc_binary {
     ],
     static_libs: [
         "libc++fs",
+        "libprotoutil",
         "libuprobestats",
         "uprobestats_flags_c_lib",
     ],
