@@ -21,10 +21,12 @@
 
 __BEGIN_DECLS
 
-// Starts uprobestats with the provided config.
+// Starts uprobestats with the provided config. The <config> argument is a
+// serialized protobuf of type UprobestatsConfig defined in
+// packages/modules/UprobeStats/src/config.proto.
 //
 // The behavior of uprobestats should mostly be controlled by a config from the
-// server.  Therefore there is very little API exposed on the client device for
+// server. Therefore there is very little API exposed on the client device for
 // another client component to control uprobestats.
 //
 // The only responsibilities of the user of this API are
