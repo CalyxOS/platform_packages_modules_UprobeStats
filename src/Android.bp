@@ -60,3 +60,11 @@ cc_binary {
         "BitmapAllocation.o",
     ],
 }
+
+python_binary_host {
+    name: "hello_uprobestats",
+    main: "test/hello_uprobestats.py",
+    srcs: [
+        "test/hello_uprobestats.py",
+    ],
+}
