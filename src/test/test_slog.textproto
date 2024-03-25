@@ -1,0 +1,11 @@
+# proto-file: config.proto
+# proto-message: UprobestatsConfig
+
+tasks {
+    probe_configs {
+        bpf_name: "prog_BitmapAllocation_uprobe_bitmap_constructor_heap"
+        file_paths: "/system/framework/arm64/boot-framework.oat"
+        method_signature: "int android.util.Slog.i(java.lang.String, java.lang.String)"
+    }
+    target_process_name: "system_server"
+}

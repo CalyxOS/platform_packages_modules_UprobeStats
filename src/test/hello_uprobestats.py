@@ -1,7 +1,10 @@
 import argparse
+import os
 import subprocess
 import sys
 import time
+import config_pb2
+import google.protobuf.text_format as text_format
 
 kwargs = {
     'text': True,
@@ -11,25 +14,31 @@ kwargs = {
 }
 
 
-def get_offset():
-  print('fetching offset')
-  oatdump_cmd = (
-      "adb shell 'oatdump"
-      ' --oat-file=/system/framework/arm64/boot-framework.oat --method-filter=i'
-      ' --class-filter=Slog | grep -A 1000 "Slog.i(.*dex_method" | grep "CODE:'
-      ' ("\' | head -n 1 | cut -d = -f 2 | cut "-d " -f 1'
-  )
-  offset = subprocess.run(oatdump_cmd, **kwargs).stdout.splitlines()[0].strip()
-  offset = int(offset, 0) + 4096
-  return offset
+def get_current_dir():
+  """returns the current dir, relative to the script dir."""
+  current_dir = os.path.dirname(os.path.realpath(__file__))
+  return current_dir
+
+
+textproto_file = f'{get_current_dir()}/test_slog.textproto'
+pb_file = f'{get_current_dir()}/test_slog.pb'
+
+
+def create_config_proto():
+  textproto = open(textproto_file, 'r')
+  message = text_format.Parse(textproto.read(), config_pb2.UprobestatsConfig())
+  textproto.close()
+
+  pb = open(pb_file, 'wb')
+  pb.write(message.SerializeToString())
+  pb.flush()
+  pb.close()
 
 
 def push_config():
-  offset = get_offset()
   print('creating config-slog')
   config_cmd = (
-      "adb shell 'echo /system/framework/arm64/boot-framework.oat %d >"
-      " /data/misc/uprobestats-configs/config-slog'" % offset
+      f'adb push {pb_file} /data/misc/uprobestats-configs/config-slog.pb'
   )
   subprocess.run(config_cmd, **kwargs)
 
@@ -42,7 +51,7 @@ def clear_logcat():
 def start_uprobestats():
   print('starting uprobestats')
   subprocess.run(
-      'adb shell setprop uprobestats.start_with_config config-slog', **kwargs
+      'adb shell setprop uprobestats.start_with_config config-slog.pb', **kwargs
   )
 
 
@@ -81,6 +90,7 @@ if __name__ == '__main__':
       help='Try n times to get a ring buffer > 0',
   )
   args = parser.parse_args()
+  create_config_proto()
   push_config()
   if args.iterations == 0:
     clear_logcat()
