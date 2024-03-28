@@ -5,6 +5,7 @@ package {
 aconfig_declarations {
     name: "uprobestats_flags",
     package: "android.uprobestats.flags",
+    container: "system",
     srcs: ["flag.aconfig"],
 }
 
