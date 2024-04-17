@@ -28,6 +28,10 @@ message UprobestatsConfig {
       // Full method signature. E.g.
       // void android.content.pm.PackageManagerInternal.finishPackageInstall(int, boolean)
       optional string method_signature = 3;
+
+      // Name of the FD that the BPF program writes to. E.g.
+      // map_BitmapAllocation_output_buf. Note that this does not include the full file path.
+      optional string bpf_map = 4;
     }
 
     repeated ProbeConfig probe_configs = 1;

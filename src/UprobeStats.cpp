@@ -94,6 +94,7 @@ struct BpfPerfEventConfig {
   int offset;
   int pid;
   std::string bpfProgramPath;
+  std::string bpfMapPath;
 };
 
 // Parses config and returns a list of arguments for
@@ -133,11 +134,15 @@ getBpfPerfEventConfigs(uprobestats::protos::UprobestatsConfig config) {
       auto prog_path = std::string("/sys/fs/bpf/uprobestats/") +
                        probe_config.bpf_name().c_str();
 
+      auto map_path = std::string("/sys/fs/bpf/uprobestats/") +
+                      probe_config.bpf_map().c_str();
+
       BpfPerfEventConfig eventConfig;
       eventConfig.filename = matched_file_path;
       eventConfig.offset = offset;
       eventConfig.pid = pid;
       eventConfig.bpfProgramPath = prog_path;
+      eventConfig.bpfMapPath = map_path;
       result.push_back(eventConfig);
     }
   }
@@ -175,17 +180,18 @@ int main(int argc, char **argv) {
       return 1;
     }
 
+    std::set<std::string> map_paths;
     for (auto &eventConfig : eventConfigs.value()) {
+      map_paths.insert(eventConfig.bpfMapPath);
       android::uprobestats::bpfPerfEventOpen(
           eventConfig.filename.c_str(), eventConfig.offset, eventConfig.pid,
           eventConfig.bpfProgramPath.c_str());
     }
 
-    // TODO should this be in the proto or based on bpf_name?
-    const char *map_path =
-        "/sys/fs/bpf/uprobestats/map_BitmapAllocation_output_buf";
-
     sleep(10);
-    android::uprobestats::printRingBuf(map_path);
+    for (auto map_path : map_paths) {
+      android::uprobestats::printRingBuf(map_path.c_str());
+    }
+
     return 0;
 }
