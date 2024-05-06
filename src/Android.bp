@@ -74,7 +74,7 @@ python_binary_host {
         "test/hello_uprobestats.py",
         "config.proto",
     ],
-    data: ["test/test_slog.textproto"],
+    data: ["test/*.textproto"],
     libs: ["libprotobuf-python"],
     proto: {
         canonical_path_from_root: false,
