@@ -74,11 +74,13 @@ int bpfPerfEventOpen(const char* filename, int offset, int pid, const char* bpfP
 
 void printRingBuf(const char* map_path) {
     auto result = android::bpf::BpfRingbuf<uint64_t>::Create(map_path);
-    auto callback = [&](const uint64_t& value) {
-        LOG(INFO) << "ringbuf result callback. value: " << value;
+    auto callback = [&](const uint64_t &value) {
+      LOG(INFO) << "ringbuf result callback. value: " << value
+                << " map_path: " << map_path;
     };
     int num_consumed = result.value()->ConsumeAll(callback).value_or(-1);
-    LOG(INFO) << "ring buffer size: " << num_consumed;
+    LOG(INFO) << "ring buffer size: " << num_consumed
+              << " map_path: " << map_path;
 }
 
 } // namespace uprobestats

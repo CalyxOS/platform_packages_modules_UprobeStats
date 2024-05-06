@@ -97,6 +97,13 @@ struct BpfPerfEventConfig {
   std::string bpfMapPath;
 };
 
+std::ostream &operator<<(std::ostream &os, const BpfPerfEventConfig &c) {
+  os << "filename: " << c.filename << " offset: " << c.offset
+     << " pid: " << c.pid << " bpfProgramPath: " << c.bpfProgramPath
+     << " bpfMapPath: " << c.bpfMapPath;
+  return os;
+}
+
 // Parses config and returns a list of arguments for
 // `android::uprobestats::bpfPerfEventOpen`
 std::optional<std::vector<BpfPerfEventConfig>>
@@ -182,13 +189,14 @@ int main(int argc, char **argv) {
 
     std::set<std::string> map_paths;
     for (auto &eventConfig : eventConfigs.value()) {
+      LOG(INFO) << "Opening bpf perf event from config: " << eventConfig;
       map_paths.insert(eventConfig.bpfMapPath);
       android::uprobestats::bpfPerfEventOpen(
           eventConfig.filename.c_str(), eventConfig.offset, eventConfig.pid,
           eventConfig.bpfProgramPath.c_str());
     }
 
-    sleep(10);
+    sleep(60);
     for (auto map_path : map_paths) {
       android::uprobestats::printRingBuf(map_path.c_str());
     }
