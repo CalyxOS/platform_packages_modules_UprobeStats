@@ -1,0 +1,12 @@
+# proto-file: config.proto
+# proto-message: UprobestatsConfig
+
+tasks {
+    probe_configs: {
+        bpf_name: "prog_BitmapAllocation_uprobe_bitmap_constructor_heap"
+        bpf_map: "map_BitmapAllocation_output_buf"
+        file_paths: "/system/framework/oat/arm64/services.odex"
+        method_signature: "void com.android.server.accessibility.AccessibilityManagerService.onServiceInfoChangedLocked(com.android.server.accessibility.AccessibilityUserState)"
+    }
+    target_process_name: "system_server"
+}
