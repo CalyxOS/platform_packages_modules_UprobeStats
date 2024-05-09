@@ -81,7 +81,7 @@ int getMethodOffsetFromOatdump(std::string oat_file,
         int offset;
         std::istringstream stream(hex_string);
         stream >> std::hex >> offset;
-        return offset;
+        return offset + 4096;
       }
     }
   }
