@@ -9,4 +9,5 @@ tasks {
         method_signature: "void com.android.server.telecom.ConnectionServiceWrapper$Adapter.setActive(java.lang.String, android.telecom.Logging.Session$Info)"
     }
     target_process_name: "system_server"
+    duration_seconds: 60
 }

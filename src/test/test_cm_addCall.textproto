@@ -9,4 +9,5 @@ tasks {
         method_signature: "void com.android.server.telecom.CallsManager.addCall(com.android.server.telecom.Call)"
     }
     target_process_name: "system_server"
+    duration_seconds: 60
 }

@@ -20,20 +20,29 @@ namespace android {
 namespace uprobestats {
 namespace config_resolver {
 
-struct BpfPerfEventConfig {
+struct ResolvedProbe {
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probe_config;
   std::string filename;
   int offset;
-  int pid;
-  std::string bpfProgramPath;
-  std::string bpfMapPath;
 };
 
-std::ostream &operator<<(std::ostream &os, const BpfPerfEventConfig &c);
+struct ResolvedTask {
+  ::uprobestats::protos::UprobestatsConfig::Task task_config;
+  int pid;
+};
 
-// Parses config and returns a list of arguments for
-// `android::uprobestats::bpfPerfEventOpen`
-std::optional<std::vector<BpfPerfEventConfig>>
-getBpfPerfEventConfigs(std::string configFilePath);
+std::ostream &operator<<(std::ostream &os, const ResolvedTask &c);
+
+std::ostream &operator<<(std::ostream &os, const ResolvedProbe &c);
+
+std::optional<::uprobestats::protos::UprobestatsConfig>
+readConfig(std::string configFilePath);
+
+std::optional<ResolvedTask>
+resolveSingleTask(::uprobestats::protos::UprobestatsConfig config);
+
+std::optional<std::vector<ResolvedProbe>>
+resolveProbes(::uprobestats::protos::UprobestatsConfig::Task task_config);
 
 } // namespace config_resolver
 } // namespace uprobestats

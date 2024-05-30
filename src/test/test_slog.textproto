@@ -9,4 +9,5 @@ tasks {
         method_signature: "int android.util.Slog.i(java.lang.String, java.lang.String)"
     }
     target_process_name: "system_server"
+    duration_seconds: 60
 }

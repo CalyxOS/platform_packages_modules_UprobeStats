@@ -9,4 +9,5 @@ tasks {
         method_signature: "void com.android.server.accessibility.AccessibilityManagerService.onServiceInfoChangedLocked(com.android.server.accessibility.AccessibilityUserState)"
     }
     target_process_name: "system_server"
+    duration_seconds: 60
 }

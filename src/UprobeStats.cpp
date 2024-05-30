@@ -40,6 +40,9 @@ bool isUprobestatsEnabled() {
   return android::uprobestats::flags::enable_uprobestats();
 }
 
+const std::string bpf_path = std::string("/sys/fs/bpf/uprobestats/");
+std::string prefix_bpf(std::string value) { return bpf_path + value.c_str(); }
+
 int main(int argc, char **argv) {
   if (isUserBuild()) {
     // TODO(296108553): See if we could avoid shipping this binary on user
@@ -56,21 +59,33 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  auto eventConfigs = config_resolver::getBpfPerfEventConfigs(
+  auto config = config_resolver::readConfig(
       std::string("/data/misc/uprobestats-configs/") + argv[1]);
-  if (!eventConfigs.has_value()) {
+  if (!config.has_value()) {
+    return 1;
+  }
+  auto resolved_task = config_resolver::resolveSingleTask(config.value());
+  if (!resolved_task.has_value()) {
     return 1;
   }
 
+  LOG(INFO) << "Found task config: " << resolved_task.value();
   std::set<std::string> map_paths;
-  for (auto &eventConfig : eventConfigs.value()) {
-    LOG(INFO) << "Opening bpf perf event from config: " << eventConfig;
-    map_paths.insert(eventConfig.bpfMapPath);
-    bpf::bpfPerfEventOpen(eventConfig.filename.c_str(), eventConfig.offset,
-                          eventConfig.pid, eventConfig.bpfProgramPath.c_str());
+  auto resolved_probe_configs =
+      config_resolver::resolveProbes(resolved_task.value().task_config);
+  if (!resolved_probe_configs.has_value()) {
+    return 1;
+  }
+  for (auto &resolved_probe : resolved_probe_configs.value()) {
+    LOG(INFO) << "Opening bpf perf event from probe: " << resolved_probe;
+    map_paths.insert(prefix_bpf(resolved_probe.probe_config.bpf_map()));
+    bpf::bpfPerfEventOpen(
+        resolved_probe.filename.c_str(), resolved_probe.offset,
+        resolved_task.value().pid,
+        prefix_bpf(resolved_probe.probe_config.bpf_name()).c_str());
   }
 
-  sleep(60);
+  sleep(resolved_task.value().task_config.duration_seconds());
   for (auto map_path : map_paths) {
     bpf::printRingBuf(map_path.c_str());
   }

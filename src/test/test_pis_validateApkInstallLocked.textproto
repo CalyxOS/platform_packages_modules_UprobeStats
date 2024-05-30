@@ -9,4 +9,5 @@ tasks {
         method_signature: "android.content.pm.parsing.PackageLite com.android.server.pm.PackageInstallerSession.validateApkInstallLocked()"
     }
     target_process_name: "system_server"
+    duration_seconds: 60
 }

@@ -9,4 +9,5 @@ tasks {
         method_signature: "void com.android.server.media.projection.MediaProjectionManagerService$MediaProjection.start(android.media.projection.IMediaProjectionCallback)"
     }
     target_process_name: "system_server"
+    duration_seconds: 60
 }

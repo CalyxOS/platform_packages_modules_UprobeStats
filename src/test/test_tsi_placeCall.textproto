@@ -9,4 +9,5 @@ tasks {
         method_signature: "void com.android.server.telecom.TelecomServiceImpl$1.placeCall(android.net.Uri, android.os.Bundle, java.lang.String, java.lang.String)"
     }
     target_process_name: "system_server"
+    duration_seconds: 60
 }
