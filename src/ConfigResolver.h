@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,23 @@
 
 namespace android {
 namespace uprobestats {
+namespace config_resolver {
 
-int bpfPerfEventOpen(const char* filename, int offset, int pid, const char* bpfProgramPath);
+struct BpfPerfEventConfig {
+  std::string filename;
+  int offset;
+  int pid;
+  std::string bpfProgramPath;
+  std::string bpfMapPath;
+};
 
-void printRingBuf(const char* map_path);
+std::ostream &operator<<(std::ostream &os, const BpfPerfEventConfig &c);
 
+// Parses config and returns a list of arguments for
+// `android::uprobestats::bpfPerfEventOpen`
+std::optional<std::vector<BpfPerfEventConfig>>
+getBpfPerfEventConfigs(std::string configFilePath);
+
+} // namespace config_resolver
 } // namespace uprobestats
 } // namespace android

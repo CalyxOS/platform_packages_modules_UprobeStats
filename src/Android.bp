@@ -17,8 +17,10 @@ cc_aconfig_library {
 cc_library {
     name: "libuprobestats",
     srcs: [
-        "BpfUtilities.cpp",
-        "ProcessInfoRetriever.cpp",
+        "Art.cpp",
+        "Bpf.cpp",
+        "ConfigResolver.cpp",
+        "Process.cpp",
         "config.proto",
     ],
     header_libs: [
@@ -31,6 +33,8 @@ cc_library {
     ],
     static_libs: [
         "libc++fs",
+        "libjsoncpp",
+        "uprobestats_flags_c_lib",
     ],
     proto: {
         export_proto_headers: true,

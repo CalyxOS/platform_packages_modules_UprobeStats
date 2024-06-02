@@ -16,12 +16,15 @@
 
 #pragma once
 
-#include <string>
-
 namespace android {
 namespace uprobestats {
+namespace bpf {
 
-int getPid(const std::string& processName);
+int bpfPerfEventOpen(const char *filename, int offset, int pid,
+                     const char *bpfProgramPath);
 
+void printRingBuf(const char *map_path);
+
+} // namespace bpf
 } // namespace uprobestats
 } // namespace android
