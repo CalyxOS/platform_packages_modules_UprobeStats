@@ -75,6 +75,25 @@ int bpfPerfEventOpen(const char *filename, int offset, int pid,
   return 0;
 }
 
+std::vector<int32_t> pollRingBuf(const char *map_path, int timeout_ms) {
+  auto result = android::bpf::BpfRingbuf<uint64_t>::Create(map_path);
+  std::vector<int32_t> vec;
+  if (!result.value()->wait(timeout_ms)) {
+    return vec;
+  }
+  auto callback = [&](const uint64_t &value) { vec.push_back(value); };
+  result.value()->ConsumeAll(callback);
+  return vec;
+}
+
+std::vector<int32_t> consumeRingBuf(const char *map_path) {
+  auto result = android::bpf::BpfRingbuf<uint64_t>::Create(map_path);
+  std::vector<int32_t> vec;
+  auto callback = [&](const uint64_t &value) { vec.push_back(value); };
+  result.value()->ConsumeAll(callback);
+  return vec;
+}
+
 void printRingBuf(const char *map_path) {
   auto result = android::bpf::BpfRingbuf<uint64_t>::Create(map_path);
   auto callback = [&](const uint64_t &value) {

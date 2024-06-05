@@ -26,6 +26,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <string>
+#include <thread>
 
 #include "Bpf.h"
 #include "ConfigResolver.h"
@@ -42,6 +43,32 @@ bool isUprobestatsEnabled() {
 
 const std::string bpf_path = std::string("/sys/fs/bpf/uprobestats/");
 std::string prefix_bpf(std::string value) { return bpf_path + value.c_str(); }
+
+struct PollArgs {
+  std::string map_path;
+  int duration_seconds;
+};
+
+void doPoll(PollArgs args) {
+  auto map_path = args.map_path;
+  auto duration_seconds = args.duration_seconds;
+  auto duration = std::chrono::seconds(duration_seconds);
+  auto start_time = std::chrono::steady_clock::now();
+  auto now = start_time;
+  while (now - start_time < duration) {
+    auto remaining = duration - (std::chrono::steady_clock::now() - start_time);
+    auto timeout_ms = static_cast<int>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(remaining)
+            .count());
+    auto result = bpf::pollRingBuf(map_path.c_str(), timeout_ms);
+    for (auto value : result) {
+      LOG(INFO) << "ringbuf result callback. value: " << value
+                << " map_path: " << map_path;
+    }
+    now = std::chrono::steady_clock::now();
+  }
+  LOG(INFO) << "finished polling for map_path: " << map_path;
+}
 
 int main(int argc, char **argv) {
   if (isUserBuild()) {
@@ -85,10 +112,19 @@ int main(int argc, char **argv) {
         prefix_bpf(resolved_probe.probe_config.bpf_name()).c_str());
   }
 
-  sleep(resolved_task.value().task_config.duration_seconds());
+  std::vector<std::thread> threads;
   for (auto map_path : map_paths) {
-    bpf::printRingBuf(map_path.c_str());
+    auto poll_args = PollArgs{
+        map_path, resolved_task.value().task_config.duration_seconds()};
+    LOG(INFO) << "Starting thread to collect results from map_path: "
+              << map_path;
+    threads.emplace_back(doPoll, poll_args);
   }
+  for (auto &thread : threads) {
+    thread.join();
+  }
+
+  LOG(INFO) << "done.";
 
   return 0;
 }

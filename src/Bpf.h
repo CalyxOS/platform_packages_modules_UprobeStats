@@ -23,6 +23,10 @@ namespace bpf {
 int bpfPerfEventOpen(const char *filename, int offset, int pid,
                      const char *bpfProgramPath);
 
+std::vector<int32_t> consumeRingBuf(const char *map_path);
+
+std::vector<int32_t> pollRingBuf(const char *map_path, int timeout_ms);
+
 void printRingBuf(const char *map_path);
 
 } // namespace bpf
