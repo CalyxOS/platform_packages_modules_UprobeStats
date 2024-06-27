@@ -23,7 +23,10 @@
 
 #include <string>
 
+#include "bpf/BpfMap.h"
 #include "bpf/BpfRingbuf.h"
+
+#include "Bpf.h"
 
 namespace android {
 namespace uprobestats {
@@ -75,16 +78,22 @@ int bpfPerfEventOpen(const char *filename, int offset, int pid,
   return 0;
 }
 
-std::vector<int32_t> pollRingBuf(const char *map_path, int timeout_ms) {
-  auto result = android::bpf::BpfRingbuf<uint64_t>::Create(map_path);
-  std::vector<int32_t> vec;
+template <typename T>
+std::vector<T> pollRingBuf(const char *map_path, int timeout_ms) {
+  auto result = android::bpf::BpfRingbuf<T>::Create(map_path);
+  std::vector<T> vec;
   if (!result.value()->wait(timeout_ms)) {
     return vec;
   }
-  auto callback = [&](const uint64_t &value) { vec.push_back(value); };
+  auto callback = [&](const T &value) { vec.push_back(value); };
   result.value()->ConsumeAll(callback);
   return vec;
 }
+
+template std::vector<uint32_t> pollRingBuf(const char *map_path,
+                                           int timeout_ms);
+template std::vector<call_result> pollRingBuf(const char *map_path,
+                                              int timeout_ms);
 
 std::vector<int32_t> consumeRingBuf(const char *map_path) {
   auto result = android::bpf::BpfRingbuf<uint64_t>::Create(map_path);
