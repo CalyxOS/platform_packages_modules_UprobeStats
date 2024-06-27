@@ -42,4 +42,8 @@ cc_library_shared {
     header_libs: [
         "libcutils_headers",
     ],
+
+    ldflags: [
+        "-Wl,-rpath,/system/${LIB}",
+    ],
 }
