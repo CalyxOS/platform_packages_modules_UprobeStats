@@ -30,11 +30,13 @@
 
 #include "Bpf.h"
 #include "ConfigResolver.h"
+#include <stats_event.h>
 
 using namespace android::uprobestats;
 
 const std::string kGenericBpfName = std::string("GenericInstrumentation");
-const bool kDebug = false;
+const int kJavaArgumentRegisterOffset = 2;
+const bool kDebug = true;
 
 bool isUserBuild() {
   return android::base::GetProperty("ro.build.type", "unknown") == "user";
@@ -49,13 +51,13 @@ std::string prefix_bpf(std::string value) { return bpf_path + value.c_str(); }
 
 struct PollArgs {
   std::string map_path;
-  int duration_seconds;
+  ::uprobestats::protos::UprobestatsConfig::Task task_config;
   bool is_generic;
 };
 
 void doPoll(PollArgs args) {
   auto map_path = args.map_path;
-  auto duration_seconds = args.duration_seconds;
+  auto duration_seconds = args.task_config.duration_seconds();
   auto duration = std::chrono::seconds(duration_seconds);
   auto start_time = std::chrono::steady_clock::now();
   auto now = start_time;
@@ -76,6 +78,34 @@ void doPoll(PollArgs args) {
           auto reg = value.regs[i];
           if (kDebug) {
             LOG(INFO) << "register: " << i << " = " << reg;
+          }
+        }
+        if (args.task_config.has_statsd_logging_config()) {
+          auto statsd_logging_config = args.task_config.statsd_logging_config();
+          int atom_id = statsd_logging_config.atom_id();
+          if (kDebug) {
+            LOG(INFO) << "attempting to write atom id: " << atom_id;
+          }
+          AStatsEvent *event = AStatsEvent_obtain();
+          AStatsEvent_setAtomId(event, atom_id);
+          for (int primitive_argument_position :
+               statsd_logging_config.primitive_argument_positions()) {
+            int primitive_argument = value.regs[primitive_argument_position +
+                                                kJavaArgumentRegisterOffset];
+            if (kDebug) {
+              LOG(INFO) << "writing argument value: " << primitive_argument
+                        << " from position: " << primitive_argument_position;
+            }
+            AStatsEvent_writeInt32(event, primitive_argument);
+          }
+          AStatsEvent_write(event);
+          AStatsEvent_release(event);
+          if (kDebug) {
+            LOG(INFO) << "successfully wrote atom id: " << atom_id;
+          }
+        } else {
+          if (kDebug) {
+            LOG(INFO) << "no statsd logging config";
           }
         }
       }
@@ -143,8 +173,7 @@ int main(int argc, char **argv) {
 
   std::vector<std::thread> threads;
   for (auto map_path : map_paths) {
-    auto poll_args = PollArgs{
-        map_path, resolved_task.value().task_config.duration_seconds()};
+    auto poll_args = PollArgs{map_path, resolved_task.value().task_config};
     if (map_path.find(kGenericBpfName) != std::string::npos) {
       poll_args.is_generic = true;
     }

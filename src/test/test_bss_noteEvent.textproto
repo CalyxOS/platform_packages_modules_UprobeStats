@@ -10,4 +10,8 @@ tasks {
     }
     target_process_name: "system_server"
     duration_seconds: 60
+    statsd_logging_config {
+        atom_id: 71
+        primitive_argument_positions: [0, 2]
+    }
 }
