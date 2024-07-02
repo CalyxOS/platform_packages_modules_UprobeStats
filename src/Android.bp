@@ -64,6 +64,7 @@ cc_binary {
     ],
     required: [
         "BitmapAllocation.o",
+        "GenericInstrumentation.o",
     ],
     proto: {
         type: "lite",

@@ -12,3 +12,14 @@ bpf {
     ],
     sub_dir: "uprobestats",
 }
+
+bpf {
+    name: "GenericInstrumentation.o",
+    srcs: ["GenericInstrumentation.c"],
+    btf: true,
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    sub_dir: "uprobestats",
+}

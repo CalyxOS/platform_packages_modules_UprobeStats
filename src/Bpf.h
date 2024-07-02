@@ -25,7 +25,14 @@ int bpfPerfEventOpen(const char *filename, int offset, int pid,
 
 std::vector<int32_t> consumeRingBuf(const char *map_path);
 
-std::vector<int32_t> pollRingBuf(const char *map_path, int timeout_ms);
+// TODO: share this struct with bpf
+struct call_result {
+  unsigned long pc;
+  unsigned long regs[10];
+};
+
+template <typename T>
+std::vector<T> pollRingBuf(const char *map_path, int timeout_ms);
 
 void printRingBuf(const char *map_path);
 
