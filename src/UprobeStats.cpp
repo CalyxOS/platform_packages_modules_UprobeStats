@@ -36,7 +36,7 @@ using namespace android::uprobestats;
 
 const std::string kGenericBpfName = std::string("GenericInstrumentation");
 const int kJavaArgumentRegisterOffset = 2;
-const bool kDebug = true;
+const bool kDebug = false;
 
 bool isUserBuild() {
   return android::base::GetProperty("ro.build.type", "unknown") == "user";
@@ -50,25 +50,25 @@ const std::string bpf_path = std::string("/sys/fs/bpf/uprobestats/");
 std::string prefix_bpf(std::string value) { return bpf_path + value.c_str(); }
 
 struct PollArgs {
-  std::string map_path;
-  ::uprobestats::protos::UprobestatsConfig::Task task_config;
-  bool is_generic;
+  std::string mapPath;
+  ::uprobestats::protos::UprobestatsConfig::Task taskConfig;
+  bool isGeneric;
 };
 
 void doPoll(PollArgs args) {
-  auto map_path = args.map_path;
-  auto duration_seconds = args.task_config.duration_seconds();
-  auto duration = std::chrono::seconds(duration_seconds);
-  auto start_time = std::chrono::steady_clock::now();
-  auto now = start_time;
-  while (now - start_time < duration) {
-    auto remaining = duration - (std::chrono::steady_clock::now() - start_time);
-    auto timeout_ms = static_cast<int>(
+  auto mapPath = args.mapPath;
+  auto durationSeconds = args.taskConfig.duration_seconds();
+  auto duration = std::chrono::seconds(durationSeconds);
+  auto startTime = std::chrono::steady_clock::now();
+  auto now = startTime;
+  while (now - startTime < duration) {
+    auto remaining = duration - (std::chrono::steady_clock::now() - startTime);
+    auto timeoutMs = static_cast<int>(
         std::chrono::duration_cast<std::chrono::milliseconds>(remaining)
             .count());
-    if (args.is_generic) {
+    if (args.isGeneric) {
       auto result =
-          bpf::pollRingBuf<bpf::call_result>(map_path.c_str(), timeout_ms);
+          bpf::pollRingBuf<bpf::CallResult>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         if (kDebug) {
           LOG(INFO) << "ringbuf generic java result...";
@@ -80,23 +80,23 @@ void doPoll(PollArgs args) {
             LOG(INFO) << "register: " << i << " = " << reg;
           }
         }
-        if (args.task_config.has_statsd_logging_config()) {
-          auto statsd_logging_config = args.task_config.statsd_logging_config();
+        if (args.taskConfig.has_statsd_logging_config()) {
+          auto statsd_logging_config = args.taskConfig.statsd_logging_config();
           int atom_id = statsd_logging_config.atom_id();
           if (kDebug) {
             LOG(INFO) << "attempting to write atom id: " << atom_id;
           }
           AStatsEvent *event = AStatsEvent_obtain();
           AStatsEvent_setAtomId(event, atom_id);
-          for (int primitive_argument_position :
+          for (int primitiveArgumentPosition :
                statsd_logging_config.primitive_argument_positions()) {
-            int primitive_argument = value.regs[primitive_argument_position +
-                                                kJavaArgumentRegisterOffset];
+            int primitiveArgument = value.regs[primitiveArgumentPosition +
+                                               kJavaArgumentRegisterOffset];
             if (kDebug) {
-              LOG(INFO) << "writing argument value: " << primitive_argument
-                        << " from position: " << primitive_argument_position;
+              LOG(INFO) << "writing argument value: " << primitiveArgument
+                        << " from position: " << primitiveArgumentPosition;
             }
-            AStatsEvent_writeInt32(event, primitive_argument);
+            AStatsEvent_writeInt32(event, primitiveArgument);
           }
           AStatsEvent_write(event);
           AStatsEvent_release(event);
@@ -110,18 +110,18 @@ void doPoll(PollArgs args) {
         }
       }
     } else {
-      auto result = bpf::pollRingBuf<uint32_t>(map_path.c_str(), timeout_ms);
+      auto result = bpf::pollRingBuf<uint32_t>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         if (kDebug) {
           LOG(INFO) << "ringbuf result callback. value: " << value
-                    << " map_path: " << map_path;
+                    << " mapPath: " << mapPath;
         }
       }
     }
     now = std::chrono::steady_clock::now();
   }
   if (kDebug) {
-    LOG(INFO) << "finished polling for map_path: " << map_path;
+    LOG(INFO) << "finished polling for mapPath: " << mapPath;
   }
 }
 
@@ -146,40 +146,40 @@ int main(int argc, char **argv) {
   if (!config.has_value()) {
     return 1;
   }
-  auto resolved_task = config_resolver::resolveSingleTask(config.value());
-  if (!resolved_task.has_value()) {
+  auto resolvedTask = config_resolver::resolveSingleTask(config.value());
+  if (!resolvedTask.has_value()) {
     return 1;
   }
 
   if (kDebug) {
-    LOG(INFO) << "Found task config: " << resolved_task.value();
+    LOG(INFO) << "Found task config: " << resolvedTask.value();
   }
-  std::set<std::string> map_paths;
-  auto resolved_probe_configs =
-      config_resolver::resolveProbes(resolved_task.value().task_config);
-  if (!resolved_probe_configs.has_value()) {
+  std::set<std::string> mapPaths;
+  auto resolvedProbeConfigs =
+      config_resolver::resolveProbes(resolvedTask.value().taskConfig);
+  if (!resolvedProbeConfigs.has_value()) {
     return 1;
   }
-  for (auto &resolved_probe : resolved_probe_configs.value()) {
+  for (auto &resolvedProbe : resolvedProbeConfigs.value()) {
     if (kDebug) {
-      LOG(INFO) << "Opening bpf perf event from probe: " << resolved_probe;
+      LOG(INFO) << "Opening bpf perf event from probe: " << resolvedProbe;
     }
-    map_paths.insert(prefix_bpf(resolved_probe.probe_config.bpf_map()));
+    mapPaths.insert(prefix_bpf(resolvedProbe.probeConfig.bpf_map()));
     bpf::bpfPerfEventOpen(
-        resolved_probe.filename.c_str(), resolved_probe.offset,
-        resolved_task.value().pid,
-        prefix_bpf(resolved_probe.probe_config.bpf_name()).c_str());
+        resolvedProbe.filename.c_str(), resolvedProbe.offset,
+        resolvedTask.value().pid,
+        prefix_bpf(resolvedProbe.probeConfig.bpf_name()).c_str());
   }
 
   std::vector<std::thread> threads;
-  for (auto map_path : map_paths) {
-    auto poll_args = PollArgs{map_path, resolved_task.value().task_config};
-    if (map_path.find(kGenericBpfName) != std::string::npos) {
-      poll_args.is_generic = true;
+  for (auto mapPath : mapPaths) {
+    auto poll_args = PollArgs{mapPath, resolvedTask.value().taskConfig};
+    if (mapPath.find(kGenericBpfName) != std::string::npos) {
+      poll_args.isGeneric = true;
     }
     if (kDebug) {
-      LOG(INFO) << "Starting thread to collect results from map_path: "
-                << map_path;
+      LOG(INFO) << "Starting thread to collect results from mapPath: "
+                << mapPath;
     }
     threads.emplace_back(doPoll, poll_args);
   }
