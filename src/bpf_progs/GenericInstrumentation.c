@@ -35,25 +35,25 @@ struct pt_regs {
 };
 
 // TODO: share this struct between bpf and uprobestats
-struct java_call_result {
+struct CallResult {
   unsigned long pc;
   unsigned long regs[10];
 };
 
-DEFINE_BPF_RINGBUF_EXT(output_buf, struct java_call_result, 4096,
-                       AID_UPROBESTATS, AID_UPROBESTATS, 0600, "", "", PRIVATE,
+DEFINE_BPF_RINGBUF_EXT(output_buf, struct CallResult, 4096, AID_UPROBESTATS,
+                       AID_UPROBESTATS, 0600, "", "", PRIVATE,
                        BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,
                        LOAD_ON_USER, LOAD_ON_USERDEBUG);
 
 DEFINE_BPF_PROG("uprobe/call", AID_UPROBESTATS, AID_UPROBESTATS, BPF_KPROBE2)
 (struct pt_regs *ctx) {
-  struct java_call_result result;
+  struct CallResult result;
   // for whatever reason, reading past register 10 causes bpf verifier to fail
   for (int i = 0; i < 11; i++) {
     result.regs[i] = ctx->regs[i];
   }
   result.pc = ctx->pc;
-  struct java_call_result *output = bpf_output_buf_reserve();
+  struct CallResult *output = bpf_output_buf_reserve();
   if (output == NULL)
     return 1;
   (*output) = result;

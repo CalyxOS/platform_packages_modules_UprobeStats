@@ -21,13 +21,13 @@ namespace uprobestats {
 namespace config_resolver {
 
 struct ResolvedProbe {
-  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probe_config;
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probeConfig;
   std::string filename;
   int offset;
 };
 
 struct ResolvedTask {
-  ::uprobestats::protos::UprobestatsConfig::Task task_config;
+  ::uprobestats::protos::UprobestatsConfig::Task taskConfig;
   int pid;
 };
 
@@ -42,7 +42,7 @@ std::optional<ResolvedTask>
 resolveSingleTask(::uprobestats::protos::UprobestatsConfig config);
 
 std::optional<std::vector<ResolvedProbe>>
-resolveProbes(::uprobestats::protos::UprobestatsConfig::Task task_config);
+resolveProbes(::uprobestats::protos::UprobestatsConfig::Task taskConfig);
 
 } // namespace config_resolver
 } // namespace uprobestats

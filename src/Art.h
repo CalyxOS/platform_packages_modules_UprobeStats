@@ -21,8 +21,8 @@ namespace uprobestats {
 namespace art {
 
 // Uses the oatdump binary to retrieve the offset for a given method
-int getMethodOffsetFromOatdump(std::string oat_file,
-                               std::string method_signature);
+int getMethodOffsetFromOatdump(std::string oatFile,
+                               std::string methodSignature);
 
 } // namespace art
 } // namespace uprobestats

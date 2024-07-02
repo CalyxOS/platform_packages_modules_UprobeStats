@@ -37,13 +37,13 @@ namespace uprobestats {
 namespace config_resolver {
 
 std::ostream &operator<<(std::ostream &os, const ResolvedTask &c) {
-  os << "pid: " << c.pid << " task_config: " << c.task_config.DebugString();
+  os << "pid: " << c.pid << " taskConfig: " << c.taskConfig.DebugString();
   return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const ResolvedProbe &c) {
   os << "filename: " << c.filename << " offset: " << c.offset
-     << " probe_config: " << c.probe_config.DebugString();
+     << " probeConfig: " << c.probeConfig.DebugString();
   return os;
 }
 
@@ -80,43 +80,43 @@ resolveSingleTask(::uprobestats::protos::UprobestatsConfig config) {
                << " tasks. Only 1 is supported. The first task is read and the "
                   "rest are ignored.";
   }
-  auto task_config = config.tasks().Get(0);
-  if (!task_config.has_duration_seconds()) {
+  auto taskConfig = config.tasks().Get(0);
+  if (!taskConfig.has_duration_seconds()) {
     LOG(ERROR) << "config task has no duration";
     return {};
   }
-  if (task_config.duration_seconds() <= 0) {
+  if (taskConfig.duration_seconds() <= 0) {
     LOG(ERROR) << "config task cannot have zero or negative duration";
   }
-  if (!task_config.has_target_process_name()) {
+  if (!taskConfig.has_target_process_name()) {
     LOG(ERROR) << "task.target_process_name is required.";
     return {};
   }
-  auto process_name = task_config.target_process_name();
+  auto process_name = taskConfig.target_process_name();
   int pid = process::getPid(process_name);
   if (pid < 0) {
     LOG(ERROR) << "Unable to find pid of " << process_name;
     return {};
   }
   ResolvedTask task;
-  task.task_config = task_config;
+  task.taskConfig = taskConfig;
   task.pid = pid;
   return task;
 }
 
 std::optional<std::vector<ResolvedProbe>>
-resolveProbes(::uprobestats::protos::UprobestatsConfig::Task task_config) {
-  if (task_config.probe_configs().size() == 0) {
+resolveProbes(::uprobestats::protos::UprobestatsConfig::Task taskConfig) {
+  if (taskConfig.probe_configs().size() == 0) {
     LOG(ERROR) << "task has no probe configs";
     return {};
   }
   std::vector<ResolvedProbe> result;
-  for (auto &probe_config : task_config.probe_configs()) {
+  for (auto &probeConfig : taskConfig.probe_configs()) {
     int offset = 0;
     std::string matched_file_path;
-    for (auto &file_path : probe_config.file_paths()) {
+    for (auto &file_path : probeConfig.file_paths()) {
       offset = art::getMethodOffsetFromOatdump(file_path,
-                                               probe_config.method_signature());
+                                               probeConfig.method_signature());
       if (offset > 0) {
         matched_file_path = file_path;
         break;
@@ -124,14 +124,14 @@ resolveProbes(::uprobestats::protos::UprobestatsConfig::Task task_config) {
     }
     if (offset == 0) {
       LOG(ERROR) << "Unable to find method offset for "
-                 << probe_config.method_signature();
+                 << probeConfig.method_signature();
       return {};
     }
 
     ResolvedProbe probe;
     probe.filename = matched_file_path;
     probe.offset = offset;
-    probe.probe_config = probe_config;
+    probe.probeConfig = probeConfig;
     result.push_back(probe);
   }
 
