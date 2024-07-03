@@ -38,6 +38,13 @@ const std::string kGenericBpfName = std::string("GenericInstrumentation");
 const int kJavaArgumentRegisterOffset = 2;
 const bool kDebug = false;
 
+#define LOG_IF_DEBUG(msg)                                                      \
+  do {                                                                         \
+    if (kDebug) {                                                              \
+      LOG(INFO) << msg;                                                        \
+    }                                                                          \
+  } while (0)
+
 bool isUserBuild() {
   return android::base::GetProperty("ro.build.type", "unknown") == "user";
 }
@@ -70,59 +77,44 @@ void doPoll(PollArgs args) {
       auto result =
           bpf::pollRingBuf<bpf::CallResult>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
-        if (kDebug) {
-          LOG(INFO) << "ringbuf generic java result...";
-          LOG(INFO) << "register: pc = " << value.pc;
-        }
+        LOG_IF_DEBUG("ringbuf generic java result...");
+        LOG_IF_DEBUG("register: pc = " << value.pc);
         for (int i = 0; i < 10; i++) {
           auto reg = value.regs[i];
-          if (kDebug) {
-            LOG(INFO) << "register: " << i << " = " << reg;
-          }
+          LOG_IF_DEBUG("register: " << i << " = " << reg);
         }
         if (args.taskConfig.has_statsd_logging_config()) {
           auto statsd_logging_config = args.taskConfig.statsd_logging_config();
           int atom_id = statsd_logging_config.atom_id();
-          if (kDebug) {
-            LOG(INFO) << "attempting to write atom id: " << atom_id;
-          }
+          LOG_IF_DEBUG("attempting to write atom id: " << atom_id);
           AStatsEvent *event = AStatsEvent_obtain();
           AStatsEvent_setAtomId(event, atom_id);
           for (int primitiveArgumentPosition :
                statsd_logging_config.primitive_argument_positions()) {
             int primitiveArgument = value.regs[primitiveArgumentPosition +
                                                kJavaArgumentRegisterOffset];
-            if (kDebug) {
-              LOG(INFO) << "writing argument value: " << primitiveArgument
-                        << " from position: " << primitiveArgumentPosition;
-            }
+            LOG_IF_DEBUG("writing argument value: "
+                         << primitiveArgument
+                         << " from position: " << primitiveArgumentPosition);
             AStatsEvent_writeInt32(event, primitiveArgument);
           }
           AStatsEvent_write(event);
           AStatsEvent_release(event);
-          if (kDebug) {
-            LOG(INFO) << "successfully wrote atom id: " << atom_id;
-          }
+          LOG_IF_DEBUG("successfully wrote atom id: " << atom_id);
         } else {
-          if (kDebug) {
-            LOG(INFO) << "no statsd logging config";
-          }
+          LOG_IF_DEBUG("no statsd logging config");
         }
       }
     } else {
       auto result = bpf::pollRingBuf<uint32_t>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
-        if (kDebug) {
-          LOG(INFO) << "ringbuf result callback. value: " << value
-                    << " mapPath: " << mapPath;
-        }
+        LOG_IF_DEBUG("ringbuf result callback. value: " << value << " mapPath: "
+                                                        << mapPath);
       }
     }
     now = std::chrono::steady_clock::now();
   }
-  if (kDebug) {
-    LOG(INFO) << "finished polling for mapPath: " << mapPath;
-  }
+  LOG_IF_DEBUG("finished polling for mapPath: " << mapPath);
 }
 
 int main(int argc, char **argv) {
@@ -151,9 +143,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (kDebug) {
-    LOG(INFO) << "Found task config: " << resolvedTask.value();
-  }
+  LOG_IF_DEBUG("Found task config: " << resolvedTask.value());
   std::set<std::string> mapPaths;
   auto resolvedProbeConfigs =
       config_resolver::resolveProbes(resolvedTask.value().taskConfig);
@@ -161,9 +151,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   for (auto &resolvedProbe : resolvedProbeConfigs.value()) {
-    if (kDebug) {
-      LOG(INFO) << "Opening bpf perf event from probe: " << resolvedProbe;
-    }
+    LOG_IF_DEBUG("Opening bpf perf event from probe: " << resolvedProbe);
     mapPaths.insert(prefix_bpf(resolvedProbe.probeConfig.bpf_map()));
     bpf::bpfPerfEventOpen(
         resolvedProbe.filename.c_str(), resolvedProbe.offset,
@@ -177,19 +165,15 @@ int main(int argc, char **argv) {
     if (mapPath.find(kGenericBpfName) != std::string::npos) {
       poll_args.isGeneric = true;
     }
-    if (kDebug) {
-      LOG(INFO) << "Starting thread to collect results from mapPath: "
-                << mapPath;
-    }
+    LOG_IF_DEBUG(
+        "Starting thread to collect results from mapPath: " << mapPath);
     threads.emplace_back(doPoll, poll_args);
   }
   for (auto &thread : threads) {
     thread.join();
   }
 
-  if (kDebug) {
-    LOG(INFO) << "done.";
-  }
+  LOG_IF_DEBUG("done.");
 
   return 0;
 }
