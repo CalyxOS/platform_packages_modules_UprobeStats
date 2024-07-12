@@ -106,7 +106,7 @@ void doPoll(PollArgs args) {
         }
       }
     } else {
-      auto result = bpf::pollRingBuf<uint32_t>(mapPath.c_str(), timeoutMs);
+      auto result = bpf::pollRingBuf<uint64_t>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         LOG_IF_DEBUG("ringbuf result callback. value: " << value << " mapPath: "
                                                         << mapPath);
@@ -136,10 +136,12 @@ int main(int argc, char **argv) {
   auto config = config_resolver::readConfig(
       std::string("/data/misc/uprobestats-configs/") + argv[1]);
   if (!config.has_value()) {
+    LOG(ERROR) << "Failed to parse uprobestats config: " << argv[1];
     return 1;
   }
   auto resolvedTask = config_resolver::resolveSingleTask(config.value());
   if (!resolvedTask.has_value()) {
+    LOG(ERROR) << "Failed to parse task";
     return 1;
   }
 
@@ -148,6 +150,7 @@ int main(int argc, char **argv) {
   auto resolvedProbeConfigs =
       config_resolver::resolveProbes(resolvedTask.value().taskConfig);
   if (!resolvedProbeConfigs.has_value()) {
+    LOG(ERROR) << "Failed to resolve a probe config from task";
     return 1;
   }
   for (auto &resolvedProbe : resolvedProbeConfigs.value()) {

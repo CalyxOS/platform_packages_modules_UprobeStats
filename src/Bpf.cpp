@@ -90,7 +90,7 @@ std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs) {
   return vec;
 }
 
-template std::vector<uint32_t> pollRingBuf(const char *mapPath, int timeoutMs);
+template std::vector<uint64_t> pollRingBuf(const char *mapPath, int timeoutMs);
 template std::vector<CallResult> pollRingBuf(const char *mapPath,
                                              int timeoutMs);
 

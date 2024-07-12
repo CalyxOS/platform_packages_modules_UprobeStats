@@ -6,7 +6,7 @@ tasks {
         bpf_name: "prog_GenericInstrumentation_uprobe_call"
         bpf_map: "map_GenericInstrumentation_output_buf"
         file_paths: "/system/framework/oat/arm64/services.odex"
-        method_signature: "void com.android.server.am.BatteryStatsService.noteScreenState(int)"
+        method_signature: "void com.android.server.am.BatteryStatsService.setBatteryState(int, int, int, int, int, int, int, int, long)"
     }
     target_process_name: "system_server"
     duration_seconds: 60

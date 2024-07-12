@@ -1,5 +1,6 @@
 package {
     default_applicable_licenses: ["Android-Apache-2.0"],
+    default_team: "trendy_team_system_performance",
 }
 
 aconfig_declarations {
@@ -71,6 +72,34 @@ cc_binary {
         type: "lite",
         static: true,
     },
+}
+
+java_test_host {
+    name: "uprobestats-test",
+    srcs: [
+        "test/*.java",
+        "config.proto",
+    ],
+    java_resources: ["test/*.textproto"],
+    libs: [
+        "compatibility-host-util",
+        "core_cts_test_resources",
+        "cts-tradefed",
+        "host-libprotobuf-java-full",
+        "tradefed",
+        "truth",
+    ],
+    static_libs: [
+        "android.hardware.usb.flags-aconfig-java-host",
+        "android.os.flags-aconfig-java-host",
+        "cts-statsd-atom-host-test-utils",
+        "flag-junit-host",
+        "perfetto_config-full",
+    ],
+    proto: {
+        type: "full",
+    },
+    test_suites: ["general-tests"],
 }
 
 python_binary_host {
