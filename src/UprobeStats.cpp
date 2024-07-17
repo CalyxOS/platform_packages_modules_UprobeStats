@@ -30,6 +30,7 @@
 
 #include "Bpf.h"
 #include "ConfigResolver.h"
+#include "Guardrail.h"
 #include <stats_event.h>
 
 using namespace android::uprobestats;
@@ -38,6 +39,8 @@ const std::string kGenericBpfMapDetail =
     std::string("GenericInstrumentation_call_detail");
 const std::string kGenericBpfMapTimestamp =
     std::string("GenericInstrumentation_call_timestamp");
+const std::string kProcessManagementMap =
+    std::string("ProcessManagement_output_buf");
 const int kJavaArgumentRegisterOffset = 2;
 const bool kDebug = true;
 
@@ -47,10 +50,6 @@ const bool kDebug = true;
       LOG(INFO) << msg;                                                        \
     }                                                                          \
   } while (0)
-
-bool isUserBuild() {
-  return android::base::GetProperty("ro.build.type", "unknown") == "user";
-}
 
 bool isUprobestatsEnabled() {
   return android::uprobestats::flags::enable_uprobestats();
@@ -135,6 +134,27 @@ void doPoll(PollArgs args) {
         AStatsEvent_release(event);
         LOG_IF_DEBUG("successfully wrote atom id: " << atom_id);
       }
+    } else if (mapPath.find(kProcessManagementMap) != std::string::npos) {
+      LOG_IF_DEBUG("Polling for SetUidTempAllowlistStateRecord result");
+      auto result = bpf::pollRingBuf<bpf::SetUidTempAllowlistStateRecord>(
+          mapPath.c_str(), timeoutMs);
+      for (auto value : result) {
+        LOG_IF_DEBUG("SetUidTempAllowlistStateRecord result... uid: "
+                     << value.uid << " onAllowlist: " << value.onAllowlist
+                     << " mapPath: " << mapPath);
+        if (!args.taskConfig.has_statsd_logging_config()) {
+          LOG_IF_DEBUG("no statsd logging config");
+          continue;
+        }
+        auto statsd_logging_config = args.taskConfig.statsd_logging_config();
+        int atom_id = statsd_logging_config.atom_id();
+        AStatsEvent *event = AStatsEvent_obtain();
+        AStatsEvent_setAtomId(event, atom_id);
+        AStatsEvent_writeInt32(event, value.uid);
+        AStatsEvent_writeBool(event, value.onAllowlist);
+        AStatsEvent_write(event);
+        AStatsEvent_release(event);
+      }
     } else {
       LOG_IF_DEBUG("Polling for i64 result");
       auto result = bpf::pollRingBuf<uint64_t>(mapPath.c_str(), timeoutMs);
@@ -149,12 +169,6 @@ void doPoll(PollArgs args) {
 }
 
 int main(int argc, char **argv) {
-  if (isUserBuild()) {
-    // TODO(296108553): See if we could avoid shipping this binary on user
-    // builds.
-    LOG(ERROR) << "uprobestats disabled on user build. Exiting.";
-    return 1;
-  }
   if (!isUprobestatsEnabled()) {
     LOG(ERROR) << "uprobestats disabled by flag. Exiting.";
     return 1;
@@ -168,6 +182,11 @@ int main(int argc, char **argv) {
       std::string("/data/misc/uprobestats-configs/") + argv[1]);
   if (!config.has_value()) {
     LOG(ERROR) << "Failed to parse uprobestats config: " << argv[1];
+    return 1;
+  }
+  if (!guardrail::isAllowed(config.value(), android::base::GetProperty(
+                                                "ro.build.type", "unknown"))) {
+    LOG(ERROR) << "uprobestats probing config disallowed on this device.";
     return 1;
   }
   auto resolvedTask = config_resolver::resolveSingleTask(config.value());

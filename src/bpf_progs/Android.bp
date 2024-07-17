@@ -13,3 +13,14 @@ bpf {
     srcs: ["GenericInstrumentation.c"],
     sub_dir: "uprobestats",
 }
+
+bpf {
+    name: "ProcessManagement.o",
+    srcs: ["ProcessManagement.c"],
+    btf: true,
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    sub_dir: "uprobestats",
+}
