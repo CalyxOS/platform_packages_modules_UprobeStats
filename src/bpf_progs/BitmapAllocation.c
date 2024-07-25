@@ -24,7 +24,7 @@ DEFINE_BPF_RINGBUF_EXT(output_buf, __u64, 4096, AID_UPROBESTATS, AID_UPROBESTATS
                        LOAD_ON_USERDEBUG);
 
 DEFINE_BPF_PROG("uprobe/bitmap_constructor_heap", AID_UPROBESTATS, AID_UPROBESTATS, BPF_KPROBE2)
-(void* this_ptr, void* buffer_address, __u32 size) {
+(__unused void* this_ptr, __unused void* buffer_address, __unused __u32 size) {
     __u64* output = bpf_output_buf_reserve();
     if (output == NULL) return 1;
     (*output) = 123;
