@@ -34,7 +34,8 @@
 
 using namespace android::uprobestats;
 
-const std::string kGenericBpfName = std::string("GenericInstrumentation");
+const std::string kGenericBpfName =
+    std::string("GenericInstrumentation_uprobe_call_detail");
 const int kJavaArgumentRegisterOffset = 2;
 const bool kDebug = false;
 
@@ -83,33 +84,53 @@ void doPoll(PollArgs args) {
           auto reg = value.regs[i];
           LOG_IF_DEBUG("register: " << i << " = " << reg);
         }
-        if (args.taskConfig.has_statsd_logging_config()) {
-          auto statsd_logging_config = args.taskConfig.statsd_logging_config();
-          int atom_id = statsd_logging_config.atom_id();
-          LOG_IF_DEBUG("attempting to write atom id: " << atom_id);
-          AStatsEvent *event = AStatsEvent_obtain();
-          AStatsEvent_setAtomId(event, atom_id);
-          for (int primitiveArgumentPosition :
-               statsd_logging_config.primitive_argument_positions()) {
-            int primitiveArgument = value.regs[primitiveArgumentPosition +
-                                               kJavaArgumentRegisterOffset];
-            LOG_IF_DEBUG("writing argument value: "
-                         << primitiveArgument
-                         << " from position: " << primitiveArgumentPosition);
-            AStatsEvent_writeInt32(event, primitiveArgument);
-          }
-          AStatsEvent_write(event);
-          AStatsEvent_release(event);
-          LOG_IF_DEBUG("successfully wrote atom id: " << atom_id);
-        } else {
+        if (!args.taskConfig.has_statsd_logging_config()) {
           LOG_IF_DEBUG("no statsd logging config");
+          continue;
         }
+
+        auto statsd_logging_config = args.taskConfig.statsd_logging_config();
+        int atom_id = statsd_logging_config.atom_id();
+        LOG_IF_DEBUG("attempting to write atom id: " << atom_id);
+        AStatsEvent *event = AStatsEvent_obtain();
+        AStatsEvent_setAtomId(event, atom_id);
+        for (int primitiveArgumentPosition :
+             statsd_logging_config.primitive_argument_positions()) {
+          int primitiveArgument = value.regs[primitiveArgumentPosition +
+                                             kJavaArgumentRegisterOffset];
+          LOG_IF_DEBUG("writing argument value: " << primitiveArgument
+                                                  << " from position: "
+                                                  << primitiveArgumentPosition);
+          AStatsEvent_writeInt32(event, primitiveArgument);
+        }
+        AStatsEvent_write(event);
+        AStatsEvent_release(event);
+        LOG_IF_DEBUG("successfully wrote atom id: " << atom_id);
       }
     } else {
       auto result = bpf::pollRingBuf<uint64_t>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         LOG_IF_DEBUG("ringbuf result callback. value: " << value << " mapPath: "
                                                         << mapPath);
+        if (!args.taskConfig.has_statsd_logging_config()) {
+          LOG_IF_DEBUG("no statsd logging config");
+          continue;
+        }
+        // TODO: for now, just write a single int64 to the atom.
+        // We're arbitrarily writing the value to the first field in the given
+        // atom, which may not work generically enough in practice.
+        // We will build a cleaner abstraction for handling "just give me
+        // timestamps when X API is called", but we're just trying ot get things
+        // working for now.
+        auto statsd_logging_config = args.taskConfig.statsd_logging_config();
+        int atom_id = statsd_logging_config.atom_id();
+        LOG_IF_DEBUG("attempting to write atom id: " << atom_id);
+        AStatsEvent *event = AStatsEvent_obtain();
+        AStatsEvent_setAtomId(event, atom_id);
+        AStatsEvent_writeInt64(event, value);
+        AStatsEvent_write(event);
+        AStatsEvent_release(event);
+        LOG_IF_DEBUG("successfully wrote atom id: " << atom_id);
       }
     }
     now = std::chrono::steady_clock::now();

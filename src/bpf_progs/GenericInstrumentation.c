@@ -40,12 +40,18 @@ struct CallResult {
   unsigned long regs[10];
 };
 
-DEFINE_BPF_RINGBUF_EXT(output_buf, struct CallResult, 4096, AID_UPROBESTATS,
+DEFINE_BPF_RINGBUF_EXT(call_detail_buf, struct CallResult, 4096,
+                       AID_UPROBESTATS, AID_UPROBESTATS, 0600, "", "", PRIVATE,
+                       BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,
+                       LOAD_ON_USER, LOAD_ON_USERDEBUG);
+
+DEFINE_BPF_RINGBUF_EXT(call_timestamp_buf, __u64, 4096, AID_UPROBESTATS,
                        AID_UPROBESTATS, 0600, "", "", PRIVATE,
                        BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,
                        LOAD_ON_USER, LOAD_ON_USERDEBUG);
 
-DEFINE_BPF_PROG("uprobe/call", AID_UPROBESTATS, AID_UPROBESTATS, BPF_KPROBE2)
+DEFINE_BPF_PROG("uprobe/call_detail", AID_UPROBESTATS, AID_UPROBESTATS,
+                BPF_KPROBE1)
 (struct pt_regs *ctx) {
   struct CallResult result;
   // for whatever reason, reading past register 10 causes bpf verifier to fail
@@ -53,11 +59,23 @@ DEFINE_BPF_PROG("uprobe/call", AID_UPROBESTATS, AID_UPROBESTATS, BPF_KPROBE2)
     result.regs[i] = ctx->regs[i];
   }
   result.pc = ctx->pc;
-  struct CallResult *output = bpf_output_buf_reserve();
+  struct CallResult *output = bpf_call_detail_buf_reserve();
   if (output == NULL)
     return 1;
   (*output) = result;
-  bpf_output_buf_submit(output);
+  bpf_call_detail_buf_submit(output);
+  return 0;
+}
+
+DEFINE_BPF_PROG("uprobe/call_timestamp", AID_UPROBESTATS, AID_UPROBESTATS,
+                BPF_KPROBE2)
+() {
+  __u64 *output = bpf_call_timestamp_buf_reserve();
+  if (output == NULL) {
+    return 1;
+  }
+  (*output) = bpf_ktime_get_ns();
+  bpf_call_timestamp_buf_submit(output);
   return 0;
 }
 
