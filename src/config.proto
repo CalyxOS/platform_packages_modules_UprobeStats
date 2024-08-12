@@ -28,19 +28,19 @@ message UprobestatsConfig {
       // Full method signature. E.g.
       // void android.content.pm.PackageManagerInternal.finishPackageInstall(int, boolean)
       optional string method_signature = 3;
-
-      // Name of the FD that the BPF program writes to. E.g.
-      // map_BitmapAllocation_output_buf. Note that this does not include the full file path.
-      optional string bpf_map = 4;
     }
 
     repeated ProbeConfig probe_configs = 1;
 
+    // Name of the FDs that the BPF programs write to. E.g.
+    // map_BitmapAllocation_output_buf. Note that this does not include the full file path.
+    repeated string bpf_maps = 2;
+
     // Name of the process to be probed, e.g. system_server.
-    optional string target_process_name = 2;
+    optional string target_process_name = 3;
 
     // How long the probes should remain active.
-    optional int32 duration_seconds = 3;
+    optional int32 duration_seconds = 4;
 
     message StatsdLoggingConfig {
       optional int64 atom_id = 1;

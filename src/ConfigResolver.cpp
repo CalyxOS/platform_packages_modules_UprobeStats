@@ -120,6 +120,9 @@ resolveProbes(::uprobestats::protos::UprobestatsConfig::Task taskConfig) {
       if (offset > 0) {
         matched_file_path = file_path;
         break;
+      } else {
+        LOG(WARNING) << "File " << file_path << " has no offset for "
+                     << probeConfig.method_signature();
       }
     }
     if (offset == 0) {

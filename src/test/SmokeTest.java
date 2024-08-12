@@ -107,8 +107,8 @@ public class SmokeTest extends DeviceTestCase {
                 data.get(0)
                         .getAtom()
                         .getExtension(UprobestatsExtensionAtoms.testUprobestatsAtomReported);
-        assertThat(reported.getFirstField()).isGreaterThan(0);
-        assertThat(reported.getSecondField()).isEqualTo(0);
+        assertThat(reported.getFirstField()).isEqualTo(1);
+        assertThat(reported.getSecondField()).isGreaterThan(0);
         assertThat(reported.getThirdField()).isEqualTo(0);
     }
 }

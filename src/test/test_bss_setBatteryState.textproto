@@ -3,11 +3,11 @@
 
 tasks {
     probe_configs {
-        bpf_name: "prog_GenericInstrumentation_uprobe_call_timestamp"
-        bpf_map: "map_GenericInstrumentation_call_timestamp_buf"
+        bpf_name: "prog_GenericInstrumentation_uprobe_call_timestamp_1"
         file_paths: ["/system/framework/oat/arm64/services.odex", "/system/framework/oat/x86_64/services.odex"]
         method_signature: "void com.android.server.am.BatteryStatsService.setBatteryState(int, int, int, int, int, int, int, int, long)"
     }
+    bpf_maps: "map_GenericInstrumentation_call_timestamp_buf"
     target_process_name: "system_server"
     duration_seconds: 60
     statsd_logging_config {

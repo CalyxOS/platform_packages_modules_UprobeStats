@@ -31,6 +31,11 @@ struct CallResult {
   unsigned long regs[10];
 };
 
+struct CallTimestamp {
+  unsigned int event;
+  unsigned long timestampNs;
+};
+
 template <typename T>
 std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs);
 

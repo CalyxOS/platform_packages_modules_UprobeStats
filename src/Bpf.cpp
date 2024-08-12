@@ -93,6 +93,8 @@ std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs) {
 template std::vector<uint64_t> pollRingBuf(const char *mapPath, int timeoutMs);
 template std::vector<CallResult> pollRingBuf(const char *mapPath,
                                              int timeoutMs);
+template std::vector<CallTimestamp> pollRingBuf(const char *mapPath,
+                                                int timeoutMs);
 
 std::vector<int32_t> consumeRingBuf(const char *mapPath) {
   auto result = android::bpf::BpfRingbuf<uint64_t>::Create(mapPath);
