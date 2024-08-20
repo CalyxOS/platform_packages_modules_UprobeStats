@@ -26,7 +26,6 @@ cc_library {
     ],
     header_libs: [
         "bpf_headers",
-        "bpf_syscall_wrappers",
     ],
     shared_libs: [
         "libbase",
