@@ -1,0 +1,16 @@
+# proto-file: config.proto
+# proto-message: UprobestatsConfig
+
+tasks {
+    probe_configs: {
+        bpf_name: "prog_ProcessManagement_uprobe_set_uid_temp_allowlist_state"
+        file_paths: "/system/framework/oat/arm64/services.odex"
+        method_signature: "void com.android.server.am.OomAdjuster.setUidTempAllowlistStateLSP(int, boolean)"
+    }
+    bpf_maps: "map_ProcessManagement_output_buf"
+    target_process_name: "system_server"
+    duration_seconds: 180
+    statsd_logging_config {
+      atom_id: 926
+    }
+}

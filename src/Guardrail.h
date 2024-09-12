@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2024 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,16 @@
 
 #pragma once
 
+#include <config.pb.h>
+#include <string>
+
 namespace android {
 namespace uprobestats {
-namespace bpf {
+namespace guardrail {
 
-int bpfPerfEventOpen(const char *filename, int offset, int pid,
-                     const char *bpfProgramPath);
+bool isAllowed(const ::uprobestats::protos::UprobestatsConfig &config,
+               const std::string &buildType);
 
-std::vector<int32_t> consumeRingBuf(const char *mapPath);
-
-// TODO: share this struct with bpf
-struct CallResult {
-  unsigned long pc;
-  unsigned long regs[10];
-};
-
-struct CallTimestamp {
-  unsigned int event;
-  unsigned long timestampNs;
-};
-
-struct SetUidTempAllowlistStateRecord {
-  __u64 uid;
-  bool onAllowlist;
-};
-
-template <typename T>
-std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs);
-
-void printRingBuf(const char *mapPath);
-
-} // namespace bpf
+} // namespace guardrail
 } // namespace uprobestats
 } // namespace android
