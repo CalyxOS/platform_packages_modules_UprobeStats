@@ -21,8 +21,6 @@ namespace android {
 namespace uprobestats {
 namespace art {
 
-const int PAGE_OFFSET = 16384;
-
 // Uses the oatdump binary to retrieve the offset for a given method
 int getMethodOffsetFromOatdump(std::string oatFile,
                                std::string methodSignature) {
@@ -54,7 +52,7 @@ int getMethodOffsetFromOatdump(std::string oatFile,
         if (offset == 0) {
           return 0;
         }
-        return offset + PAGE_OFFSET;
+        return offset;
       }
     }
   }
