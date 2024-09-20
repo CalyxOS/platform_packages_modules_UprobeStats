@@ -39,6 +39,8 @@ const std::string kGenericBpfMapDetail =
     std::string("GenericInstrumentation_call_detail");
 const std::string kGenericBpfMapTimestamp =
     std::string("GenericInstrumentation_call_timestamp");
+const std::string kUpdateDeviceIdleTempAllowlistMap =
+    std::string("ProcessManagement_update_device_idle_temp_allowlist_records");
 const std::string kProcessManagementMap =
     std::string("ProcessManagement_output_buf");
 const int kJavaArgumentRegisterOffset = 2;
@@ -134,6 +136,35 @@ void doPoll(PollArgs args) {
         AStatsEvent_release(event);
         LOG_IF_DEBUG("successfully wrote atom id: " << atom_id);
       }
+    } else if (mapPath.find(kUpdateDeviceIdleTempAllowlistMap) !=
+               std::string::npos) {
+      LOG_IF_DEBUG("Polling for UpdateDeviceIdleTempAllowlistRecord result");
+      auto result = bpf::pollRingBuf<bpf::UpdateDeviceIdleTempAllowlistRecord>(
+          mapPath.c_str(), timeoutMs);
+      for (auto value : result) {
+        LOG_IF_DEBUG("UpdateDeviceIdleTempAllowlistRecord result... "
+                     << " changing_uid: " << value.changing_uid
+                     << " reason_code: " << value.reason_code << " reason: "
+                     << value.reason << " calling_uid: " << value.calling_uid
+                     << " mapPath: " << mapPath);
+        if (!args.taskConfig.has_statsd_logging_config()) {
+          LOG_IF_DEBUG("no statsd logging config");
+          continue;
+        }
+        auto statsd_logging_config = args.taskConfig.statsd_logging_config();
+        int atom_id = statsd_logging_config.atom_id();
+        AStatsEvent *event = AStatsEvent_obtain();
+        AStatsEvent_setAtomId(event, atom_id);
+        AStatsEvent_writeInt32(event, value.changing_uid);
+        AStatsEvent_writeBool(event, value.adding);
+        AStatsEvent_writeInt64(event, value.duration_ms);
+        AStatsEvent_writeInt32(event, value.type);
+        AStatsEvent_writeInt32(event, value.reason_code);
+        AStatsEvent_writeString(event, value.reason);
+        AStatsEvent_writeInt32(event, value.calling_uid);
+        AStatsEvent_write(event);
+        AStatsEvent_release(event);
+      }
     } else if (mapPath.find(kProcessManagementMap) != std::string::npos) {
       LOG_IF_DEBUG("Polling for SetUidTempAllowlistStateRecord result");
       auto result = bpf::pollRingBuf<bpf::SetUidTempAllowlistStateRecord>(
@@ -204,6 +235,12 @@ int main(int argc, char **argv) {
   }
   for (auto &resolvedProbe : resolvedProbeConfigs.value()) {
     LOG_IF_DEBUG("Opening bpf perf event from probe: " << resolvedProbe);
+    if (resolvedProbe.filename ==
+            "prog_ProcessManagement_uprobe_update_device_idle_temp_allowlist" &&
+        !android::uprobestats::flags::
+            uprobestats_support_update_device_idle_temp_allowlist()) {
+      LOG(ERROR) << "update_device_idle_temp_allowlist disabled by flag";
+    }
     auto openResult = bpf::bpfPerfEventOpen(
         resolvedProbe.filename.c_str(), resolvedProbe.offset,
         resolvedTask.value().pid,
@@ -217,6 +254,12 @@ int main(int argc, char **argv) {
 
   std::vector<std::thread> threads;
   for (auto mapPath : resolvedTask.value().taskConfig.bpf_maps()) {
+    if (mapPath ==
+            "map_ProcessManagement_update_device_idle_temp_allowlist_record" &&
+        !android::uprobestats::flags::
+            uprobestats_support_update_device_idle_temp_allowlist()) {
+      LOG(ERROR) << "update_device_idle_temp_allowlist disabled by flag";
+    }
     auto pollArgs =
         PollArgs{prefixBpf(mapPath), resolvedTask.value().taskConfig};
     LOG_IF_DEBUG(

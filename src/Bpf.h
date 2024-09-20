@@ -41,6 +41,16 @@ struct SetUidTempAllowlistStateRecord {
   bool onAllowlist;
 };
 
+struct UpdateDeviceIdleTempAllowlistRecord {
+  int changing_uid;
+  bool adding;
+  long duration_ms;
+  int type;
+  int reason_code;
+  char reason[256];
+  int calling_uid;
+};
+
 template <typename T>
 std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs);
 
