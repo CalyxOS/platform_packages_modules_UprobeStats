@@ -28,6 +28,12 @@ android_app_certificate {
 }
 
 apex {
+    // This apex will be enabled using release_uprobestats_module flag
+    enabled: select(release_flag("RELEASE_UPROBESTATS_MODULE"), {
+        true: true,
+        false: false,
+    }),
+
     name: "com.android.uprobestats",
     manifest: "manifest.json",
     file_contexts: ":com.android.uprobestats-file_contexts",
