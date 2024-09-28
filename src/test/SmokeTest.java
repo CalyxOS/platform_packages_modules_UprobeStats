@@ -23,8 +23,11 @@ import android.cts.statsdatom.lib.ConfigUtils;
 import android.cts.statsdatom.lib.DeviceUtils;
 import android.cts.statsdatom.lib.ReportUtils;
 
+import com.android.compatibility.common.util.CpuFeatures;
 import com.android.internal.os.StatsdConfigProto;
 import com.android.os.StatsLog;
+import com.android.os.framework.FrameworkExtensionAtoms;
+import com.android.os.framework.FrameworkExtensionAtoms.DeviceIdleTempAllowlistUpdated;
 import com.android.os.uprobestats.TestUprobeStatsAtomReported;
 import com.android.os.uprobestats.UprobestatsExtensionAtoms;
 import com.android.tradefed.device.ITestDevice;
@@ -44,9 +47,13 @@ import java.util.Scanner;
 public class SmokeTest extends DeviceTestCase {
 
     private static final String BATTERY_STATS_CONFIG = "test_bss_setBatteryState.textproto";
+    private static final String TEMP_ALLOWLIST_CONFIG =
+            "test_updateDeviceIdleTempAllowlist.textproto";
     private static final String CONFIG_NAME = "test";
     private static final String CMD_SETPROP_UPROBESTATS = "setprop uprobestats.start_with_config ";
     private static final String CONFIG_DIR = "/data/misc/uprobestats-configs/";
+
+    private ExtensionRegistry mRegistry;
 
     @Override
     protected void setUp() throws Exception {
@@ -54,12 +61,16 @@ public class SmokeTest extends DeviceTestCase {
         ReportUtils.clearReports(getDevice());
         getDevice().deleteFile(CONFIG_DIR + CONFIG_NAME);
         RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
+        getDevice().executeShellCommand("killall uprobestats");
+        mRegistry = ExtensionRegistry.newInstance();
+        UprobestatsExtensionAtoms.registerAllExtensions(mRegistry);
+        FrameworkExtensionAtoms.registerAllExtensions(mRegistry);
     }
 
-    public void testBatteryStats() throws Exception {
+    void startUprobeStats(String textprotoFilename, int atomId) throws Exception {
         // 1. Parse config from resources
         String textProto =
-                new Scanner(this.getClass().getResourceAsStream(BATTERY_STATS_CONFIG))
+                new Scanner(this.getClass().getResourceAsStream(textprotoFilename))
                         .useDelimiter("\\A")
                         .next();
         UprobestatsConfig.Builder builder = UprobestatsConfig.newBuilder();
@@ -75,21 +86,23 @@ public class SmokeTest extends DeviceTestCase {
         assertTrue(getDevice().pushFile(tmp, CONFIG_DIR + CONFIG_NAME));
 
         // 3. Configure StatsD
-        ExtensionRegistry registry = ExtensionRegistry.newInstance();
-        UprobestatsExtensionAtoms.registerAllExtensions(registry);
         StatsdConfigProto.StatsdConfig.Builder configBuilder =
                 ConfigUtils.createConfigBuilder("AID_UPROBESTATS");
-        ConfigUtils.addEventMetric(
-                configBuilder,
-                UprobestatsExtensionAtoms.TEST_UPROBESTATS_ATOM_REPORTED_FIELD_NUMBER);
+        ConfigUtils.addEventMetric(configBuilder, atomId);
         ConfigUtils.uploadConfig(getDevice(), configBuilder);
 
         // 4. Start UprobeStats
         device.executeShellCommand(CMD_SETPROP_UPROBESTATS + CONFIG_NAME);
         // Allow UprobeStats time to attach probe
         RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
+    }
 
-        // 5. Set charging state, which should invoke BatteryStatsService#setBatteryState.
+    public void testBatteryStats() throws Exception {
+        startUprobeStats(
+                BATTERY_STATS_CONFIG,
+                UprobestatsExtensionAtoms.TEST_UPROBESTATS_ATOM_REPORTED_FIELD_NUMBER);
+
+        // Set charging state, which should invoke BatteryStatsService#setBatteryState.
         // Assumptions:
         //   - uprobestats flag is enabled
         //   - userdebug build
@@ -99,9 +112,9 @@ public class SmokeTest extends DeviceTestCase {
         // Allow UprobeStats/StatsD time to collect metric
         RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
 
-        // 6. See if the atom made it
+        // See if the atom made it
         List<StatsLog.EventMetricData> data =
-                ReportUtils.getEventMetricDataList(getDevice(), registry);
+                ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
         assertThat(data.size()).isEqualTo(1);
         TestUprobeStatsAtomReported reported =
                 data.get(0)
@@ -110,5 +123,29 @@ public class SmokeTest extends DeviceTestCase {
         assertThat(reported.getFirstField()).isEqualTo(1);
         assertThat(reported.getSecondField()).isGreaterThan(0);
         assertThat(reported.getThirdField()).isEqualTo(0);
+    }
+
+    public void testUpdateDeviceIdleTempAllowlist() throws Exception {
+        if (!CpuFeatures.isArm64(getDevice())) {
+            return;
+        }
+        startUprobeStats(
+                TEMP_ALLOWLIST_CONFIG,
+                FrameworkExtensionAtoms.DEVICE_IDLE_TEMP_ALLOWLIST_UPDATED_FIELD_NUMBER);
+
+        // Set tempallowlist
+        getDevice().executeShellCommand("cmd deviceidle tempwhitelist com.google.android.tts");
+        // Allow UprobeStats/StatsD time to collect metric
+        RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
+
+        // See if the atom made it
+        List<StatsLog.EventMetricData> data =
+                ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
+        assertThat(data.size()).isEqualTo(1);
+        DeviceIdleTempAllowlistUpdated reported =
+                data.get(0)
+                        .getAtom()
+                        .getExtension(FrameworkExtensionAtoms.deviceIdleTempAllowlistUpdated);
+        assertThat(reported.getReason()).isEqualTo("shell");
     }
 }

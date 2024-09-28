@@ -33,7 +33,6 @@ cc_library {
         "liblog",
     ],
     static_libs: [
-        "libc++fs",
         "libjsoncpp",
         "uprobestats_flags_c_lib",
     ],
@@ -50,7 +49,6 @@ cc_binary {
         "config.proto",
     ],
     static_libs: [
-        "libc++fs",
         "libjsoncpp",
         "libprotoutil",
         "libuprobestats",
