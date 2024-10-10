@@ -49,8 +49,8 @@ public class SmokeTest extends DeviceTestCase {
     private static final String BATTERY_STATS_CONFIG = "test_bss_setBatteryState.textproto";
     private static final String TEMP_ALLOWLIST_CONFIG =
             "test_updateDeviceIdleTempAllowlist.textproto";
-    private static final String CONFIG_NAME = "test";
-    private static final String CMD_SETPROP_UPROBESTATS = "setprop uprobestats.start_with_config ";
+    private static final String CONFIG_NAME = "config";
+    private static final String CMD_SETPROP_UPROBESTATS = "setprop ctl.start uprobestats";
     private static final String CONFIG_DIR = "/data/misc/uprobestats-configs/";
 
     private ExtensionRegistry mRegistry;
@@ -92,7 +92,7 @@ public class SmokeTest extends DeviceTestCase {
         ConfigUtils.uploadConfig(getDevice(), configBuilder);
 
         // 4. Start UprobeStats
-        device.executeShellCommand(CMD_SETPROP_UPROBESTATS + CONFIG_NAME);
+        device.executeShellCommand(CMD_SETPROP_UPROBESTATS);
         // Allow UprobeStats time to attach probe
         RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
     }

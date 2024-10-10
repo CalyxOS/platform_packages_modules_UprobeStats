@@ -26,5 +26,5 @@ void AUprobestatsClient_startUprobestats(const uint8_t* config, int64_t size) {
     android::base::WriteStringToFile(
             std::string(reinterpret_cast<const char*>(config), size), filename);
     chmod(filename, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    android::base::SetProperty("uprobestats.start_with_config", "config");
+    android::base::SetProperty("ctl.start", "uprobestats");
 }
