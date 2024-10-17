@@ -35,6 +35,9 @@ apex {
     }),
 
     name: "com.android.uprobestats",
+    binaries: [
+        "uprobestatsbpfload",
+    ],
     manifest: "manifest.json",
     file_contexts: ":com.android.uprobestats-file_contexts",
     key: "com.android.uprobestats.key",
