@@ -1,0 +1,17 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+    default_team: "trendy_team_system_performance",
+}
+
+cc_binary {
+    name: "uprobestatsbpfload",
+    srcs: ["UprobeStatsBpfLoad.cpp"],
+    shared_libs: [
+        "libbase",
+        "liblog",
+    ],
+    apex_available: [
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
+}
