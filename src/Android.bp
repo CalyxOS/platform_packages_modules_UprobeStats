@@ -26,7 +26,7 @@ cc_library {
         "config.proto",
     ],
     header_libs: [
-        "bpf_headers",
+        "uprobestats_bpf_headers",
     ],
     shared_libs: [
         "libbase",
