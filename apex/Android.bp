@@ -57,6 +57,9 @@ apex {
         "ProcessManagement.o",
     ],
 
+    native_shared_libs: [
+        "libuprobestats_client",
+    ],
     manifest: "manifest.json",
     file_contexts: ":com.android.uprobestats-file_contexts",
     key: "com.android.uprobestats.key",
