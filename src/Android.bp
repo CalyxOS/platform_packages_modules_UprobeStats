@@ -13,6 +13,11 @@ aconfig_declarations {
 cc_aconfig_library {
     name: "uprobestats_flags_c_lib",
     aconfig_declarations: "uprobestats_flags",
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
 }
 
 cc_library {
@@ -26,7 +31,7 @@ cc_library {
         "config.proto",
     ],
     header_libs: [
-        "bpf_headers",
+        "uprobestats_bpf_headers",
     ],
     shared_libs: [
         "libbase",
@@ -40,6 +45,11 @@ cc_library {
         export_proto_headers: true,
         type: "lite",
     },
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
 }
 
 cc_binary {
@@ -60,17 +70,27 @@ cc_binary {
         "libstatssocket",
     ],
     init_rc: [
-        "UprobeStats.rc",
+        "UprobeStats-platform.rc",
     ],
-    required: [
-        "BitmapAllocation.o",
-        "GenericInstrumentation.o",
-        "ProcessManagement.o",
-    ],
+    required: select(release_flag("RELEASE_UPROBESTATS_MODULE"), {
+        true: [],
+        false: [
+            "BitmapAllocation.o",
+            "GenericInstrumentation.o",
+            "ProcessManagement.o",
+        ],
+    }),
+
     proto: {
         type: "lite",
         static: true,
     },
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+
+    min_sdk_version: "35",
 }
 
 java_test_host {

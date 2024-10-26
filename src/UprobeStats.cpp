@@ -199,20 +199,15 @@ void doPoll(PollArgs args) {
   LOG_IF_DEBUG("finished polling for mapPath: " << mapPath);
 }
 
-int main(int argc, char **argv) {
+int main() {
   if (!isUprobestatsEnabled()) {
     LOG(ERROR) << "uprobestats disabled by flag. Exiting.";
     return 1;
   }
-  if (argc < 2) {
-    LOG(ERROR) << "Not enough command line arguments. Exiting.";
-    return 1;
-  }
-
-  auto config = config_resolver::readConfig(
-      std::string("/data/misc/uprobestats-configs/") + argv[1]);
+  auto config =
+      config_resolver::readConfig("/data/misc/uprobestats-configs/config");
   if (!config.has_value()) {
-    LOG(ERROR) << "Failed to parse uprobestats config: " << argv[1];
+    LOG(ERROR) << "Failed to parse uprobestats config.";
     return 1;
   }
   if (!guardrail::isAllowed(config.value(), android::base::GetProperty(
