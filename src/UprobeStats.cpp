@@ -30,6 +30,7 @@
 
 #include "Bpf.h"
 #include "ConfigResolver.h"
+#include "DebugLog.h"
 #include "Guardrail.h"
 #include <stats_event.h>
 
@@ -44,14 +45,6 @@ const std::string kUpdateDeviceIdleTempAllowlistMap =
 const std::string kProcessManagementMap =
     std::string("ProcessManagement_output_buf");
 const int kJavaArgumentRegisterOffset = 2;
-const bool kDebug = true;
-
-#define LOG_IF_DEBUG(msg)                                                      \
-  do {                                                                         \
-    if (kDebug) {                                                              \
-      LOG(INFO) << msg;                                                        \
-    }                                                                          \
-  } while (0)
 
 bool isUprobestatsEnabled() {
   return android::uprobestats::flags::enable_uprobestats();
