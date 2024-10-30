@@ -93,6 +93,19 @@ cc_binary {
     min_sdk_version: "35",
 }
 
+java_library_host {
+    name: "uprobestats-protos",
+    srcs: [
+        "config.proto",
+    ],
+    proto: {
+        include_dirs: [
+            "external/protobuf/src",
+        ],
+        type: "full",
+    },
+}
+
 java_test_host {
     name: "uprobestats-test",
     srcs: [
