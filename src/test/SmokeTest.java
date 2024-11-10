@@ -16,12 +16,22 @@
 
 package test;
 
+import static android.uprobestats.flags.Flags.FLAG_ENABLE_UPROBESTATS;
+
+import static com.android.art.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS;
+
 import static com.google.common.truth.Truth.assertThat;
+
+import static org.junit.Assume.assumeTrue;
 
 import android.cts.statsdatom.lib.AtomTestUtils;
 import android.cts.statsdatom.lib.ConfigUtils;
 import android.cts.statsdatom.lib.DeviceUtils;
 import android.cts.statsdatom.lib.ReportUtils;
+import android.platform.test.annotations.RequiresFlagsDisabled;
+import android.platform.test.annotations.RequiresFlagsEnabled;
+import android.platform.test.flag.junit.CheckFlagsRule;
+import android.platform.test.flag.junit.host.HostFlagsValueProvider;
 
 import com.android.compatibility.common.util.CpuFeatures;
 import com.android.internal.os.StatsdConfigProto;
@@ -31,11 +41,17 @@ import com.android.os.framework.FrameworkExtensionAtoms.DeviceIdleTempAllowlistU
 import com.android.os.uprobestats.TestUprobeStatsAtomReported;
 import com.android.os.uprobestats.UprobestatsExtensionAtoms;
 import com.android.tradefed.device.ITestDevice;
-import com.android.tradefed.testtype.DeviceTestCase;
+import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
+import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
 import com.android.tradefed.util.RunUtil;
 
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.TextFormat;
+
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import uprobestats.protos.Config.UprobestatsConfig;
 
@@ -44,9 +60,13 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Scanner;
 
-public class SmokeTest extends DeviceTestCase {
+@RunWith(DeviceJUnit4ClassRunner.class)
+public class SmokeTest extends BaseHostJUnit4Test {
 
-    private static final String BATTERY_STATS_CONFIG = "test_bss_setBatteryState.textproto";
+    private static final String BATTERY_STATS_CONFIG_OATDUMP =
+            "test_bss_setBatteryState_oatdump.textproto";
+    private static final String BATTERY_STATS_CONFIG_ART =
+            "test_bss_setBatteryState_artApi.textproto";
     private static final String TEMP_ALLOWLIST_CONFIG =
             "test_updateDeviceIdleTempAllowlist.textproto";
     private static final String CONFIG_NAME = "config";
@@ -55,8 +75,12 @@ public class SmokeTest extends DeviceTestCase {
 
     private ExtensionRegistry mRegistry;
 
-    @Override
-    protected void setUp() throws Exception {
+    @Rule
+    public final CheckFlagsRule mCheckFlagsRule =
+            HostFlagsValueProvider.createCheckFlagsRule(this::getDevice);
+
+    @Before
+    public void setUp() throws Exception {
         ConfigUtils.removeConfig(getDevice());
         ReportUtils.clearReports(getDevice());
         getDevice().deleteFile(CONFIG_DIR + CONFIG_NAME);
@@ -79,11 +103,11 @@ public class SmokeTest extends DeviceTestCase {
 
         // 2. Write config to a file and drop it on the device
         File tmp = File.createTempFile("uprobestats", CONFIG_NAME);
-        assertTrue(tmp.setWritable(true));
+        assertThat(tmp.setWritable(true)).isTrue();
         Files.write(tmp.toPath(), config.toByteArray());
         ITestDevice device = getDevice();
-        assertTrue(getDevice().enableAdbRoot());
-        assertTrue(getDevice().pushFile(tmp, CONFIG_DIR + CONFIG_NAME));
+        assertThat(getDevice().enableAdbRoot()).isTrue();
+        assertThat(getDevice().pushFile(tmp, CONFIG_DIR + CONFIG_NAME)).isTrue();
 
         // 3. Configure StatsD
         StatsdConfigProto.StatsdConfig.Builder configBuilder =
@@ -97,10 +121,28 @@ public class SmokeTest extends DeviceTestCase {
         RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
     }
 
-    public void testBatteryStats() throws Exception {
+    @Test
+    @RequiresFlagsDisabled(FLAG_EXECUTABLE_METHOD_FILE_OFFSETS)
+    @RequiresFlagsEnabled(FLAG_ENABLE_UPROBESTATS)
+    public void batteryStats_oatdump() throws Exception {
+        batteryStats(BATTERY_STATS_CONFIG_OATDUMP);
+    }
+
+    @Test
+    @RequiresFlagsEnabled({FLAG_ENABLE_UPROBESTATS, FLAG_EXECUTABLE_METHOD_FILE_OFFSETS})
+    public void batteryStats_artApi() throws Exception {
+        batteryStats(BATTERY_STATS_CONFIG_ART);
+    }
+
+    @Test
+    @RequiresFlagsEnabled({FLAG_ENABLE_UPROBESTATS, FLAG_EXECUTABLE_METHOD_FILE_OFFSETS})
+    public void batteryStats_oatdump_fallback() throws Exception {
+        batteryStats(BATTERY_STATS_CONFIG_OATDUMP);
+    }
+
+    private void batteryStats(String config) throws Exception {
         startUprobeStats(
-                BATTERY_STATS_CONFIG,
-                UprobestatsExtensionAtoms.TEST_UPROBESTATS_ATOM_REPORTED_FIELD_NUMBER);
+                config, UprobestatsExtensionAtoms.TEST_UPROBESTATS_ATOM_REPORTED_FIELD_NUMBER);
 
         // Set charging state, which should invoke BatteryStatsService#setBatteryState.
         // Assumptions:
@@ -125,10 +167,10 @@ public class SmokeTest extends DeviceTestCase {
         assertThat(reported.getThirdField()).isEqualTo(0);
     }
 
-    public void testUpdateDeviceIdleTempAllowlist() throws Exception {
-        if (!CpuFeatures.isArm64(getDevice())) {
-            return;
-        }
+    @Test
+    @RequiresFlagsEnabled(FLAG_ENABLE_UPROBESTATS)
+    public void updateDeviceIdleTempAllowlist() throws Exception {
+        assumeTrue(CpuFeatures.isArm64(getDevice()));
         startUprobeStats(
                 TEMP_ALLOWLIST_CONFIG,
                 FrameworkExtensionAtoms.DEVICE_IDLE_TEMP_ALLOWLIST_UPDATED_FIELD_NUMBER);

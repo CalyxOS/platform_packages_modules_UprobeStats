@@ -20,12 +20,35 @@ cc_aconfig_library {
     min_sdk_version: "35",
 }
 
+java_aconfig_library {
+    name: "uprobestats_flags_java_lib",
+    aconfig_declarations: "uprobestats_flags",
+    host_supported: true,
+}
+
+cc_aconfig_library {
+    name: "art_flags_uprobestats_c_lib",
+    aconfig_declarations: "art-aconfig-flags",
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
+}
+
+java_aconfig_library {
+    name: "art_flags_uprobestats_java_lib",
+    aconfig_declarations: "art-aconfig-flags",
+    host_supported: true,
+}
+
 cc_library {
     name: "libuprobestats",
     srcs: [
         "Art.cpp",
         "Bpf.cpp",
         "ConfigResolver.cpp",
+        "DynamicInstrumentationManager.cpp",
         "Process.cpp",
         "Guardrail.cpp",
         "config.proto",
@@ -34,10 +57,13 @@ cc_library {
         "uprobestats_bpf_headers",
     ],
     shared_libs: [
+        "libandroid",
+        "libbinder_ndk",
         "libbase",
         "liblog",
     ],
     static_libs: [
+        "art_flags_uprobestats_c_lib",
         "libjsoncpp",
         "uprobestats_flags_c_lib",
     ],
@@ -65,6 +91,7 @@ cc_binary {
         "uprobestats_flags_c_lib",
     ],
     shared_libs: [
+        "libandroid",
         "libbase",
         "liblog",
         "libstatssocket",
@@ -93,6 +120,19 @@ cc_binary {
     min_sdk_version: "35",
 }
 
+java_library_host {
+    name: "uprobestats-protos",
+    srcs: [
+        "config.proto",
+    ],
+    proto: {
+        include_dirs: [
+            "external/protobuf/src",
+        ],
+        type: "full",
+    },
+}
+
 java_test_host {
     name: "uprobestats-test",
     srcs: [
@@ -114,6 +154,8 @@ java_test_host {
         "cts-statsd-atom-host-test-utils",
         "flag-junit-host",
         "perfetto_config-full",
+        "art_flags_uprobestats_java_lib",
+        "uprobestats_flags_java_lib",
     ],
     proto: {
         type: "full",
