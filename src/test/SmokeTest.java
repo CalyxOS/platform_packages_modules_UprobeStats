@@ -17,8 +17,7 @@
 package test;
 
 import static android.uprobestats.flags.Flags.FLAG_ENABLE_UPROBESTATS;
-
-import static com.android.art.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS;
+import static android.uprobestats.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS;
 
 import static com.google.common.truth.Truth.assertThat;
 
