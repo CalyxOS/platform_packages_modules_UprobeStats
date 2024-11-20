@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const bool kDebug = true;
+const bool kDebug = false;
 
 #define LOG_IF_DEBUG(msg)                                                      \
   do {                                                                         \
