@@ -101,6 +101,7 @@ cc_binary {
     shared_libs: [
         "libandroid",
         "libbase",
+        "libbinder_ndk",
         "liblog",
         "libstatssocket",
     ],
