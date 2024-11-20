@@ -20,7 +20,9 @@
 #include <android-base/logging.h>
 #include <android-base/parseint.h>
 #include <android-base/properties.h>
+#include <android-base/scopeguard.h>
 #include <android-base/strings.h>
+#include <android/binder_process.h>
 #include <android_uprobestats_flags.h>
 #include <config.pb.h>
 #include <iostream>
@@ -193,6 +195,14 @@ void doPoll(PollArgs args) {
 }
 
 int main() {
+  if (android::uprobestats::flags::executable_method_file_offsets()) {
+    ABinderProcess_startThreadPool();
+  }
+  const auto guard = ::android::base::make_scope_guard([] {
+    if (android::uprobestats::flags::executable_method_file_offsets()) {
+      ABinderProcess_joinThreadPool();
+    }
+  });
   if (!isUprobestatsEnabled()) {
     LOG(ERROR) << "uprobestats disabled by flag. Exiting.";
     return 1;
