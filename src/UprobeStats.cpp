@@ -213,8 +213,10 @@ int main() {
     LOG(ERROR) << "Failed to parse uprobestats config.";
     return 1;
   }
-  if (!guardrail::isAllowed(config.value(), android::base::GetProperty(
-                                                "ro.build.type", "unknown"))) {
+  if (!guardrail::isAllowed(
+          config.value(),
+          android::base::GetProperty("ro.build.type", "unknown"),
+          android::uprobestats::flags::executable_method_file_offsets())) {
     LOG(ERROR) << "uprobestats probing config disallowed on this device.";
     return 1;
   }
