@@ -43,33 +43,33 @@ typedef ADynamicInstrumentationManager_TargetProcess *(
     *ADynamicInstrumentationManager_TargetProcess_create)(
     uid_t uid, pid_t pid, const char *processName);
 typedef void (*ADynamicInstrumentationManager_TargetProcess_destroy)(
-    ADynamicInstrumentationManager_TargetProcess *instance);
+    const ADynamicInstrumentationManager_TargetProcess *instance);
 
 typedef ADynamicInstrumentationManager_MethodDescriptor *(
     *ADynamicInstrumentationManager_MethodDescriptor_create)(
     const char *fullyQualifiedClassName, const char *methodName,
     const char *fullyQualifiedParameters[], unsigned int numParameters);
 typedef void (*ADynamicInstrumentationManager_MethodDescriptor_destroy)(
-    ADynamicInstrumentationManager_MethodDescriptor *instance);
+    const ADynamicInstrumentationManager_MethodDescriptor *instance);
 
 typedef const char *(
     *ADynamicInstrumentationManager_ExecutableMethodFileOffsets_getContainerPath)(
-    ADynamicInstrumentationManager_ExecutableMethodFileOffsets *instance);
+    const ADynamicInstrumentationManager_ExecutableMethodFileOffsets *instance);
 typedef unsigned long (
     *ADynamicInstrumentationManager_ExecutableMethodFileOffsets_getContainerOffset)(
-    ADynamicInstrumentationManager_ExecutableMethodFileOffsets *instance);
+    const ADynamicInstrumentationManager_ExecutableMethodFileOffsets *instance);
 typedef unsigned long (
     *ADynamicInstrumentationManager_ExecutableMethodFileOffsets_getMethodOffset)(
-    ADynamicInstrumentationManager_ExecutableMethodFileOffsets *instance);
+    const ADynamicInstrumentationManager_ExecutableMethodFileOffsets *instance);
 typedef void (
     *ADynamicInstrumentationManager_ExecutableMethodFileOffsets_destroy)(
-    ADynamicInstrumentationManager_ExecutableMethodFileOffsets *instance);
+    const ADynamicInstrumentationManager_ExecutableMethodFileOffsets *instance);
 
 typedef int32_t (
     *ADynamicInstrumentationManager_getExecutableMethodFileOffsets)(
     const ADynamicInstrumentationManager_TargetProcess &targetProcess,
     const ADynamicInstrumentationManager_MethodDescriptor &methodDescriptor,
-    ADynamicInstrumentationManager_ExecutableMethodFileOffsets **out);
+    const ADynamicInstrumentationManager_ExecutableMethodFileOffsets **out);
 
 const char kLibandroidPath[] = "libandroid.so";
 
@@ -142,31 +142,29 @@ getExecutableMethodFileOffsets(std::string &processName, std::string &fqcn,
   const ADynamicInstrumentationManager_TargetProcess *targetProcess =
       targetProcess_create(0, 0, processName.c_str());
 
-  const char **fqpArray = new const char *[fqParameters.size()];
+  std::vector<const char *> fqpVec;
   for (size_t i = 0; i < fqParameters.size(); ++i) {
-    fqpArray[i] = fqParameters[i].c_str();
+    fqpVec.push_back(fqParameters[i].c_str());
   }
   const ADynamicInstrumentationManager_MethodDescriptor *methodDescriptor =
-      methodDescriptor_create(fqcn.c_str(), methodName.c_str(), fqpArray,
+      methodDescriptor_create(fqcn.c_str(), methodName.c_str(), fqpVec.data(),
                               fqParameters.size());
 
-  ADynamicInstrumentationManager_ExecutableMethodFileOffsets *offsets = nullptr;
+  const ADynamicInstrumentationManager_ExecutableMethodFileOffsets *offsets =
+      nullptr;
   int32_t result = getExecutableMethodFileOffsets(*targetProcess,
                                                   *methodDescriptor, &offsets);
 
-  targetProcess_destroy(
-      const_cast<ADynamicInstrumentationManager_TargetProcess *>(
-          targetProcess));
-  methodDescriptor_destroy(
-      const_cast<ADynamicInstrumentationManager_MethodDescriptor *>(
-          methodDescriptor));
+  targetProcess_destroy(targetProcess);
+  methodDescriptor_destroy(methodDescriptor);
 
-  if (result != 0 || offsets == nullptr) {
+  if (result != 0) {
     LOG(ERROR) << "error calling getExecutableMethodFileOffsets. result: "
                << result;
-    executableMethodFileOffsets_destroy(
-        const_cast<ADynamicInstrumentationManager_ExecutableMethodFileOffsets
-                       *>(offsets));
+  }
+
+  if (offsets == nullptr) {
+    LOG(ERROR) << "could not find offset for " << methodName;
     return {};
   }
 
@@ -175,9 +173,7 @@ getExecutableMethodFileOffsets(std::string &processName, std::string &fqcn,
   uint64_t containerOffset = getContainerOffset(offsets);
   uint64_t methodOffset = getMethodOffset(offsets);
 
-  executableMethodFileOffsets_destroy(
-      const_cast<ADynamicInstrumentationManager_ExecutableMethodFileOffsets *>(
-          offsets));
+  executableMethodFileOffsets_destroy(offsets);
 
   ExecutableMethodFileOffsets executableMethodFileOffsets;
   executableMethodFileOffsets.containerPath = containerPath;
