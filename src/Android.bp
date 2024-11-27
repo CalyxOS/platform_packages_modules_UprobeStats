@@ -169,7 +169,10 @@ java_test_host {
     proto: {
         type: "full",
     },
-    test_suites: ["general-tests"],
+    test_suites: [
+        "general-tests",
+        "mts-uprobestats",
+    ],
 }
 
 python_binary_host {

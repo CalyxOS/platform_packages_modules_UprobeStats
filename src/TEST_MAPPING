@@ -3,5 +3,13 @@
         {
             "name": "uprobestats-test"
         }
+    ],
+    "uprobestats-mainline-presubmit": [
+        {
+            "name": "uprobestats-test"
+        },
+        {
+            "name": "CtsStatsdAtomHostTestCases"
+        }
     ]
 }
