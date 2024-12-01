@@ -27,8 +27,16 @@ TEST_F(GuardrailTest, EverythingAllowedOnUserDebugAndEng) {
   ::uprobestats::protos::UprobestatsConfig config;
   config.add_tasks()->add_probe_configs()->set_method_signature(
       "void com.android.server.am.SomeClass.doWork()");
-  EXPECT_TRUE(guardrail::isAllowed(config, "userdebug"));
-  EXPECT_TRUE(guardrail::isAllowed(config, "eng"));
+  EXPECT_TRUE(guardrail::isAllowed(config, "userdebug", false));
+  EXPECT_TRUE(guardrail::isAllowed(config, "eng", false));
+
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probeConfig;
+  probeConfig.set_fully_qualified_class_name("com.android.server.am.SomeClass");
+  probeConfig.set_method_name("doWork");
+  ::uprobestats::protos::UprobestatsConfig newConfig;
+  newConfig.add_tasks()->add_probe_configs()->CopyFrom(probeConfig);
+  EXPECT_TRUE(guardrail::isAllowed(newConfig, "userdebug", true));
+  EXPECT_TRUE(guardrail::isAllowed(newConfig, "eng", true));
 }
 
 TEST_F(GuardrailTest, OomAdjusterAllowed) {
@@ -40,16 +48,39 @@ TEST_F(GuardrailTest, OomAdjusterAllowed) {
       "void "
       "com.android.server.am.OomAdjuster$$ExternalSyntheticLambda0.accept(java."
       "lang.Object)");
-  EXPECT_TRUE(guardrail::isAllowed(config, "user"));
-  EXPECT_TRUE(guardrail::isAllowed(config, "userdebug"));
-  EXPECT_TRUE(guardrail::isAllowed(config, "eng"));
+  EXPECT_TRUE(guardrail::isAllowed(config, "user", false));
+  EXPECT_TRUE(guardrail::isAllowed(config, "userdebug", false));
+  EXPECT_TRUE(guardrail::isAllowed(config, "eng", false));
+
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probeConfig;
+  probeConfig.set_fully_qualified_class_name(
+      "com.android.server.am.OomAdjuster");
+  probeConfig.set_method_name("setUidTempAllowlistStateLSP");
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probeConfigTwo;
+  probeConfigTwo.set_fully_qualified_class_name(
+      "com.android.server.am.OomAdjuster$$ExternalSyntheticLambda0");
+  probeConfigTwo.set_method_name("accept");
+  ::uprobestats::protos::UprobestatsConfig newConfig;
+  newConfig.add_tasks()->add_probe_configs()->CopyFrom(probeConfig);
+  newConfig.add_tasks()->add_probe_configs()->CopyFrom(probeConfigTwo);
+  EXPECT_TRUE(guardrail::isAllowed(newConfig, "user", true));
+  EXPECT_TRUE(guardrail::isAllowed(newConfig, "userdebug", true));
+  EXPECT_TRUE(guardrail::isAllowed(newConfig, "eng", true));
 }
 
 TEST_F(GuardrailTest, DisallowOomAdjusterWithSuffix) {
   ::uprobestats::protos::UprobestatsConfig config;
   config.add_tasks()->add_probe_configs()->set_method_signature(
       "void com.android.server.am.OomAdjusterWithSomeSuffix.doWork()");
-  EXPECT_FALSE(guardrail::isAllowed(config, "user"));
+  EXPECT_FALSE(guardrail::isAllowed(config, "user", false));
+
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probeConfig;
+  probeConfig.set_fully_qualified_class_name(
+      "com.android.server.am.OomAdjusterWithSomeSuffix");
+  probeConfig.set_method_name("doWork");
+  ::uprobestats::protos::UprobestatsConfig newConfig;
+  newConfig.add_tasks()->add_probe_configs()->CopyFrom(probeConfig);
+  EXPECT_FALSE(guardrail::isAllowed(newConfig, "user", true));
 }
 
 TEST_F(GuardrailTest, DisallowedMethodInSecondTask) {
@@ -59,7 +90,20 @@ TEST_F(GuardrailTest, DisallowedMethodInSecondTask) {
       "boolean)");
   config.add_tasks()->add_probe_configs()->set_method_signature(
       "void com.android.server.am.disallowedClass.doWork()");
-  EXPECT_FALSE(guardrail::isAllowed(config, "user"));
+  EXPECT_FALSE(guardrail::isAllowed(config, "user", false));
+
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probeConfig;
+  probeConfig.set_fully_qualified_class_name(
+      "com.android.server.am.OomAdjuster");
+  probeConfig.set_method_name("setUidTempAllowlistStateLSP");
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig probeConfigTwo;
+  probeConfigTwo.set_fully_qualified_class_name(
+      "com.android.server.am.disallowedClass");
+  probeConfigTwo.set_method_name("doWork");
+  ::uprobestats::protos::UprobestatsConfig newConfig;
+  newConfig.add_tasks()->add_probe_configs()->CopyFrom(probeConfig);
+  newConfig.add_tasks()->add_probe_configs()->CopyFrom(probeConfigTwo);
+  EXPECT_FALSE(guardrail::isAllowed(newConfig, "user", true));
 }
 
 } // namespace uprobestats

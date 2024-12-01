@@ -24,7 +24,8 @@ namespace uprobestats {
 namespace guardrail {
 
 bool isAllowed(const ::uprobestats::protos::UprobestatsConfig &config,
-               const std::string &buildType);
+               const std::string &buildType,
+               bool executableMethodFileOffsetsApiEnabled);
 
 } // namespace guardrail
 } // namespace uprobestats
