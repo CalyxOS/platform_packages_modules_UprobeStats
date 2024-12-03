@@ -49,6 +49,15 @@ java_aconfig_library {
     host_supported: true,
 }
 
+java_aconfig_library {
+    name: "uprobestats_mainline_flags_java_lib",
+    aconfig_declarations: "uprobestats_mainline_flags",
+    host_supported: true,
+    visibility: [
+        "//cts/hostsidetests/statsdatom:__subpackages__",
+    ],
+}
+
 cc_library {
     name: "libuprobestats",
     srcs: [
