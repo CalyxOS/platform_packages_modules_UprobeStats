@@ -58,13 +58,37 @@ java_aconfig_library {
     ],
 }
 
-cc_library {
+soong_config_module_type {
+    name: "uprobestats_cc_library",
+    module_type: "cc_library",
+    config_namespace: "ANDROID",
+    bool_variables: [
+        "release_uprobestats_module",
+    ],
+    properties: [
+        "cflags",
+    ],
+}
+
+soong_config_bool_variable {
+    name: "release_uprobestats_module",
+}
+
+uprobestats_cc_library {
     name: "libuprobestats",
+    soong_config_variables: {
+        release_uprobestats_module: {
+            cflags: [
+                "-DUPROBESTATS_IN_MAINLINE=1",
+            ],
+        },
+    },
     srcs: [
         "Art.cpp",
         "Bpf.cpp",
         "ConfigResolver.cpp",
         "DynamicInstrumentationManager.cpp",
+        "FlagSelector.cpp",
         "Process.cpp",
         "Guardrail.cpp",
         "config.proto",

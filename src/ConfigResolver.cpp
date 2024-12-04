@@ -25,7 +25,6 @@
 #include <android-base/parseint.h>
 #include <android-base/properties.h>
 #include <android-base/strings.h>
-#include <android_uprobestats_flags.h>
 #include <config.pb.h>
 #include <json/json.h>
 
@@ -33,6 +32,7 @@
 #include "ConfigResolver.h"
 #include "DebugLog.h"
 #include "DynamicInstrumentationManager.h"
+#include "FlagSelector.h"
 #include "Process.h"
 
 namespace android {
@@ -115,7 +115,7 @@ resolveProbes(::uprobestats::protos::UprobestatsConfig::Task &taskConfig) {
   }
   std::vector<ResolvedProbe> result;
   for (auto &probeConfig : taskConfig.probe_configs()) {
-    if (android::uprobestats::flags::executable_method_file_offsets() &&
+    if (android::uprobestats::flag_selector::executable_method_file_offsets() &&
         probeConfig.has_fully_qualified_class_name()) {
       LOG_IF_DEBUG("using getExecutableMethodFileOffsets to retrieve offsets");
       std::vector<std::string> fqParameters(
