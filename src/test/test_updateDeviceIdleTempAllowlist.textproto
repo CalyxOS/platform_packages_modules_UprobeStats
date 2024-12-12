@@ -6,6 +6,9 @@ tasks {
         bpf_name: "prog_ProcessManagement_uprobe_update_device_idle_temp_allowlist"
         file_paths: "/system/framework/oat/arm64/services.odex"
         method_signature: "void com.android.server.am.ActivityManagerService$LocalService.updateDeviceIdleTempAllowlist(int[], int, boolean, long, int, int, java.lang.String, int)"
+        fully_qualified_class_name: "com.android.server.am.ActivityManagerService$LocalService"
+        method_name: "updateDeviceIdleTempAllowlist"
+        fully_qualified_parameters: ["int[]", "int", "boolean", "long", "int", "int", "java.lang.String", "int"]
     }
     bpf_maps: "map_ProcessManagement_update_device_idle_temp_allowlist_records"
     target_process_name: "system_server"

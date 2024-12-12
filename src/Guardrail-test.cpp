@@ -68,6 +68,18 @@ TEST_F(GuardrailTest, OomAdjusterAllowed) {
   EXPECT_TRUE(guardrail::isAllowed(newConfig, "eng", true));
 }
 
+TEST_F(GuardrailTest, UpdateDeviceIdleTempAllowlistAllowed) {
+  ::uprobestats::protos::UprobestatsConfig config;
+  ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig *probeConfig =
+      config.add_tasks()->add_probe_configs();
+  probeConfig->set_fully_qualified_class_name(
+      "com.android.server.am.ActivityManagerService$LocalService");
+  probeConfig->set_method_name("updateDeviceIdleTempAllowlist");
+  EXPECT_TRUE(guardrail::isAllowed(config, "user", true));
+  EXPECT_TRUE(guardrail::isAllowed(config, "userdebug", true));
+  EXPECT_TRUE(guardrail::isAllowed(config, "eng", true));
+}
+
 TEST_F(GuardrailTest, DisallowOomAdjusterWithSuffix) {
   ::uprobestats::protos::UprobestatsConfig config;
   config.add_tasks()->add_probe_configs()->set_method_signature(
