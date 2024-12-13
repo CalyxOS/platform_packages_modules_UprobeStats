@@ -198,11 +198,6 @@ int main() {
   if (android::uprobestats::flag_selector::executable_method_file_offsets()) {
     ABinderProcess_startThreadPool();
   }
-  const auto guard = ::android::base::make_scope_guard([] {
-    if (android::uprobestats::flag_selector::executable_method_file_offsets()) {
-      ABinderProcess_joinThreadPool();
-    }
-  });
   if (!isUprobestatsEnabled()) {
     LOG(ERROR) << "uprobestats disabled by flag. Exiting.";
     return 1;
