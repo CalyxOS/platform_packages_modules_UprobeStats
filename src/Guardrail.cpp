@@ -27,6 +27,8 @@ using std::string;
 namespace {
 
 constexpr std::array kAllowedMethodPrefixes = {
+    "com.android.server.am.ActivityManagerService$LocalService."
+    "updateDeviceIdleTempAllowlist",
     "com.android.server.am.CachedAppOptimizer",
     "com.android.server.am.OomAdjuster",
     "com.android.server.am.OomAdjusterModernImpl",
@@ -64,7 +66,8 @@ bool isAllowed(const ::uprobestats::protos::UprobestatsConfig &config,
       bool allowed = false;
       for (const std::string allowedPrefix : kAllowedMethodPrefixes) {
         if (android::base::StartsWith(fullMethodName, allowedPrefix + ".") ||
-            android::base::StartsWith(fullMethodName, allowedPrefix + "$")) {
+            android::base::StartsWith(fullMethodName, allowedPrefix + "$") ||
+            fullMethodName == allowedPrefix) {
           allowed = true;
           break;
         }
