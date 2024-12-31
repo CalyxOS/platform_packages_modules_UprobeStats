@@ -128,13 +128,21 @@ public class SmokeTest extends BaseHostJUnit4Test {
     }
 
     @Test
-    @RequiresFlagsEnabled({FLAG_ENABLE_UPROBESTATS, FLAG_EXECUTABLE_METHOD_FILE_OFFSETS})
+    @RequiresFlagsEnabled({
+        FLAG_ENABLE_UPROBESTATS,
+        FLAG_EXECUTABLE_METHOD_FILE_OFFSETS,
+        com.android.art.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS
+    })
     public void batteryStats_artApi() throws Exception {
         batteryStats(BATTERY_STATS_CONFIG_ART);
     }
 
     @Test
-    @RequiresFlagsEnabled({FLAG_ENABLE_UPROBESTATS, FLAG_EXECUTABLE_METHOD_FILE_OFFSETS})
+    @RequiresFlagsEnabled({
+        FLAG_ENABLE_UPROBESTATS,
+        FLAG_EXECUTABLE_METHOD_FILE_OFFSETS,
+        com.android.art.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS
+    })
     public void batteryStats_oatdump_fallback() throws Exception {
         batteryStats(BATTERY_STATS_CONFIG_OATDUMP);
     }
