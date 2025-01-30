@@ -32,7 +32,7 @@ def create_and_push_config_proto(name="test_slog"):
       temp.flush()
       print(f"creating {name}")
       config_cmd = (
-          f"adb push {temp.name} /data/misc/uprobestats-configs/{name}.proto"
+          f"adb push {temp.name} /data/misc/uprobestats-configs/config"
       )
       subprocess.run(config_cmd, **kwargs)
 
@@ -42,12 +42,11 @@ def clear_logcat():
   subprocess.run("adb logcat -c", **kwargs)
 
 
-def start_uprobestats(name="test_slog"):
+def start_uprobestats():
   print("starting uprobestats")
   subprocess.run(
-      f"adb shell setprop uprobestats.start_with_config {name}.proto", **kwargs
+      f"adb shell setprop ctl.start uprobestats", **kwargs
   )
-
 
 def get_ring_buffer_values():
   time.sleep(10)
@@ -109,11 +108,11 @@ if __name__ == "__main__":
   create_and_push_config_proto(args.name)
 
   if not args.test:
-    start_uprobestats(args.name)
+    start_uprobestats()
     sys.exit(0)
 
   clear_logcat()
-  start_uprobestats(args.name)
+  start_uprobestats()
   time.sleep(60)
   ring_buf = get_ring_buffer_size()
   get_ring_buffer_values()
