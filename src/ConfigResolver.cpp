@@ -95,6 +95,11 @@ resolveSingleTask(::uprobestats::protos::UprobestatsConfig config) {
     LOG(ERROR) << "task.target_process_name is required.";
     return {};
   }
+  if (taskConfig.target_process_name() != "system_server") {
+    LOG(ERROR)
+        << "system_server is the only target process currently supported";
+    return {};
+  }
   auto process_name = taskConfig.target_process_name();
   int pid = process::getPid(process_name);
   if (pid < 0) {
