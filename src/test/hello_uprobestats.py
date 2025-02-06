@@ -42,11 +42,15 @@ def clear_logcat():
   subprocess.run("adb logcat -c", **kwargs)
 
 
-def start_uprobestats():
-  print("starting uprobestats")
-  subprocess.run(
-      f"adb shell setprop ctl.start uprobestats", **kwargs
-  )
+def start_uprobestats(run_as_shell=False):
+  if (run_as_shell):
+    print("starting uprobestats as Shell")
+    subprocess.run(
+      f"adb shell /apex/com.android.uprobestats/bin/uprobestats", **kwargs)
+  else:
+    print("starting uprobestats")
+    subprocess.run(
+        f"adb shell setprop ctl.start uprobestats", **kwargs)
 
 def get_ring_buffer_values():
   time.sleep(10)
@@ -102,17 +106,22 @@ if __name__ == "__main__":
           " logcat output to exit successfully"
       ),
   )
+  parser.add_argument(
+    "-s",
+    action="store_true",  # Store True if the flag is present
+    help="Run uprobestats as Shell",
+)
   args = parser.parse_args()
 
   adb_root()
   create_and_push_config_proto(args.name)
 
   if not args.test:
-    start_uprobestats()
+    start_uprobestats(args.s)
     sys.exit(0)
 
   clear_logcat()
-  start_uprobestats()
+  start_uprobestats(args.s)
   time.sleep(60)
   ring_buf = get_ring_buffer_size()
   get_ring_buffer_values()

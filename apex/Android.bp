@@ -55,6 +55,7 @@ apex {
         "BitmapAllocation.o",
         "GenericInstrumentation.o",
         "ProcessManagement.o",
+        "MalwareSignal.o",
     ],
 
     native_shared_libs: [

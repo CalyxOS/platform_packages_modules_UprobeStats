@@ -101,6 +101,9 @@ pollRingBuf(const char *mapPath, int timeoutMs);
 template std::vector<UpdateDeviceIdleTempAllowlistRecord>
 pollRingBuf(const char *mapPath, int timeoutMs);
 
+template std::vector<MalwareSignal> pollRingBuf(const char *mapPath,
+                                                int timeoutMs);
+
 std::vector<int32_t> consumeRingBuf(const char *mapPath) {
   auto result = android::bpf::BpfRingbuf<uint64_t>::Create(mapPath);
   std::vector<int32_t> vec;

@@ -24,3 +24,9 @@ bpf {
     ],
     sub_dir: "uprobestats",
 }
+
+bpf {
+    name: "MalwareSignal.o",
+    srcs: ["MalwareSignal.c"],
+    sub_dir: "uprobestats",
+}
