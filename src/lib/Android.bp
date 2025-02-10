@@ -12,38 +12,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-cc_library_shared {
-    name: "libuprobestats_client",
+soong_config_module_type {
+    name: "libuprobestats_client_cc_library_shared",
+    module_type: "cc_library_shared",
+    config_namespace: "ANDROID",
+    bool_variables: [
+        "release_uprobestats_module",
+    ],
+    properties: [
+        "stubs",
+        "min_sdk_version",
+        "apex_available",
+    ],
+}
 
+soong_config_bool_variable {
+    name: "release_uprobestats_module",
+}
+
+libuprobestats_client_cc_library_shared {
+    name: "libuprobestats_client",
+    soong_config_variables: {
+        release_uprobestats_module: {
+            stubs: {
+                symbol_file: "libcom.android.uprobestats.client.map.txt",
+            },
+            min_sdk_version: "35",
+            apex_available: [
+                "com.android.uprobestats",
+            ],
+            conditions_default: {
+                stubs: {
+                    symbol_file: "libuprobestats_client.map.txt",
+                    versions: ["35"],
+                },
+            },
+        },
+    },
     cflags: [
         "-Wall",
         "-Werror",
         "-Wno-enum-compare",
         "-Wno-unused-function",
     ],
-
-    shared_libs: [
-        "libbase",
-    ],
-
-    srcs: [
-        "uprobestats_client.cpp",
-    ],
-
-    export_include_dirs: [
-        "include",
-    ],
-
-    stubs: {
-        symbol_file: "libuprobestats_client.map.txt",
-        versions: ["35"],
-    },
-
-    header_libs: [
-        "libcutils_headers",
-    ],
-
-    ldflags: [
-        "-Wl,-rpath,/system/${LIB}",
-    ],
+    srcs: ["uprobestats_client.cpp"],
+    shared_libs: ["libbase"],
+    export_include_dirs: ["include"],
+    header_libs: ["libcutils_headers"],
 }

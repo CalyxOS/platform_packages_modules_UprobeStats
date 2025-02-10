@@ -30,6 +30,9 @@
 
 #include "Art.h"
 #include "ConfigResolver.h"
+#include "DebugLog.h"
+#include "DynamicInstrumentationManager.h"
+#include "FlagSelector.h"
 #include "Process.h"
 
 namespace android {
@@ -105,13 +108,43 @@ resolveSingleTask(::uprobestats::protos::UprobestatsConfig config) {
 }
 
 std::optional<std::vector<ResolvedProbe>>
-resolveProbes(::uprobestats::protos::UprobestatsConfig::Task taskConfig) {
+resolveProbes(::uprobestats::protos::UprobestatsConfig::Task &taskConfig) {
   if (taskConfig.probe_configs().size() == 0) {
     LOG(ERROR) << "task has no probe configs";
     return {};
   }
   std::vector<ResolvedProbe> result;
   for (auto &probeConfig : taskConfig.probe_configs()) {
+    if (android::uprobestats::flag_selector::executable_method_file_offsets() &&
+        probeConfig.has_fully_qualified_class_name()) {
+      LOG_IF_DEBUG("using getExecutableMethodFileOffsets to retrieve offsets");
+      std::vector<std::string> fqParameters(
+          probeConfig.fully_qualified_parameters().begin(),
+          probeConfig.fully_qualified_parameters().end());
+      std::string processName(taskConfig.target_process_name());
+      std::string fqcn(probeConfig.fully_qualified_class_name());
+      std::string methodName(probeConfig.method_name());
+      std::optional<
+          dynamic_instrumentation_manager::ExecutableMethodFileOffsets>
+          offsets =
+              dynamic_instrumentation_manager::getExecutableMethodFileOffsets(
+                  processName, fqcn, methodName, fqParameters);
+      if (!offsets.has_value()) {
+        LOG(ERROR) << "Unable to find method offset for "
+                   << probeConfig.fully_qualified_class_name() << "#"
+                   << probeConfig.method_name();
+        return {};
+      }
+
+      ResolvedProbe probe;
+      probe.filename = offsets->containerPath;
+      probe.offset = offsets->methodOffset;
+      probe.probeConfig = probeConfig;
+      result.push_back(probe);
+      continue;
+    }
+
+    LOG_IF_DEBUG("using oatdump to retrieve offsets");
     int offset = 0;
     std::string matched_file_path;
     for (auto &file_path : probeConfig.file_paths()) {

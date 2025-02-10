@@ -1,0 +1,16 @@
+# proto-file: config.proto
+# proto-message: UprobestatsConfig
+
+tasks {
+    probe_configs: {
+        bpf_name: "prog_ProcessManagement_uprobe_update_device_idle_temp_allowlist"
+        file_paths: "/system/framework/oat/arm64/services.odex"
+        method_signature: "void com.android.server.am.ActivityManagerService$LocalService.updateDeviceIdleTempAllowlist(int[], int, boolean, long, int, int, java.lang.String, int)"
+    }
+    bpf_maps: "map_ProcessManagement_update_device_idle_temp_allowlist_records"
+    target_process_name: "system_server"
+    duration_seconds: 180
+    statsd_logging_config {
+      atom_id: 940
+    }
+}

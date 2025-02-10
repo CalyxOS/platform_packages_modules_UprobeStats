@@ -1,5 +1,5 @@
-package: "android.uprobestats.flags"
-container: "system"
+package: "android.uprobestats.mainline.flags"
+container: "com.android.uprobestats"
 
 flag {
     name: "enable_uprobestats"

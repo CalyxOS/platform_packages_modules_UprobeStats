@@ -16,17 +16,14 @@
 
 #pragma once
 
-#include <config.pb.h>
-#include <string>
-
 namespace android {
 namespace uprobestats {
-namespace guardrail {
+namespace flag_selector {
 
-bool isAllowed(const ::uprobestats::protos::UprobestatsConfig &config,
-               const std::string &buildType,
-               bool executableMethodFileOffsetsApiEnabled);
+bool enable_uprobestats();
+bool uprobestats_support_update_device_idle_temp_allowlist();
+bool executable_method_file_offsets();
 
-} // namespace guardrail
+} // namespace flag_selector
 } // namespace uprobestats
 } // namespace android

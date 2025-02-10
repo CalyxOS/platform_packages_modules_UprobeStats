@@ -23,11 +23,24 @@ message UprobestatsConfig {
       // re-compiled by ART and stored in a different location. uprobestats
       // would try to place the probe on each of the paths in the order
       // specified here until the probe is successfully placed.
+      // Superseded by `fully_qualified_class_name`, `method_name`, and `fully_qualified_parameters`.
       repeated string file_paths = 2;
 
       // Full method signature. E.g.
       // void android.content.pm.PackageManagerInternal.finishPackageInstall(int, boolean)
+      // Superseded by `fully_qualified_class_name`, `method_name`, and `fully_qualified_parameters`.
       optional string method_signature = 3;
+
+      // Fully qualified class name of the method being targeted. E.g.
+      // "android.content.pm.PackageManagerInternal"
+      // Supersedes `file_paths` and `method_signature`
+      optional string fully_qualified_class_name = 4;
+      // Method name of the method being targeted. E.g. "finishPackageInstall"
+      // Supersedes `file_paths` and `method_signature`
+      optional string method_name = 5;
+      // Fully qualified parameters list of the method being targeted. E.g. ["int", "boolean"]
+      // Supersedes `file_paths` and `method_signature`
+      repeated string fully_qualified_parameters = 6;
     }
 
     repeated ProbeConfig probe_configs = 1;
