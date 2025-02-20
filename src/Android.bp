@@ -147,6 +147,7 @@ cc_binary {
             "BitmapAllocation.o",
             "GenericInstrumentation.o",
             "ProcessManagement.o",
+            "MalwareSignal.o",
         ],
     }),
 
