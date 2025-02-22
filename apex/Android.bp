@@ -66,7 +66,5 @@ apex {
     key: "com.android.uprobestats.key",
     certificate: ":com.android.uprobestats.certificate",
     defaults: ["b-launched-apex-module"],
-    // temporarily override the value from the V defaults so that
-    // the build still works on `next` for now.
-    min_sdk_version: "35",
+    min_sdk_version: "36",
 }
