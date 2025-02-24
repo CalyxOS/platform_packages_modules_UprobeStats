@@ -127,6 +127,7 @@ cc_binary {
     static_libs: [
         "libjsoncpp",
         "libprotoutil",
+        "libstatslog_uprobestats",
         "libuprobestats",
         "uprobestats_flags_c_lib",
         "uprobestats_mainline_flags_c_lib",
@@ -199,6 +200,7 @@ java_test_host {
         "perfetto_config-full",
         "art_flags_uprobestats_java_lib",
         "uprobestats_flags_java_lib",
+        "uprobestats_mainline_flags_java_lib",
     ],
     proto: {
         type: "full",
@@ -207,6 +209,16 @@ java_test_host {
         "general-tests",
         "mts-uprobestats",
     ],
+    device_common_data: [
+        ":UprobestatsTestApp",
+    ],
+}
+
+android_test {
+    name: "UprobestatsTestApp",
+    srcs: ["test/TestActivity.java"],
+    manifest: "test/AndroidManifest.xml",
+    sdk_version: "test_current",
 }
 
 python_binary_host {
@@ -243,4 +255,43 @@ cc_test {
         type: "lite",
         static: true,
     },
+}
+
+cc_library_static {
+    name: "libstatslog_uprobestats",
+    generated_sources: ["statslog_uprobestats.cpp"],
+    generated_headers: ["statslog_uprobestats.h"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    export_generated_headers: ["statslog_uprobestats.h"],
+    shared_libs: [
+        "libcutils",
+        "liblog",
+        "libstatssocket",
+        "libutils",
+    ],
+    apex_available: [
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
+}
+
+genrule {
+    name: "statslog_uprobestats.h",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --header $(genDir)/statslog_uprobestats.h --module uprobestats --namespace android,uprobestats",
+    out: [
+        "statslog_uprobestats.h",
+    ],
+}
+
+genrule {
+    name: "statslog_uprobestats.cpp",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --cpp $(genDir)/statslog_uprobestats.cpp --module uprobestats --namespace android,uprobestats --importHeader statslog_uprobestats.h --minApiLevel 35",
+    out: [
+        "statslog_uprobestats.cpp",
+    ],
 }
