@@ -243,4 +243,8 @@ cc_test {
         type: "lite",
         static: true,
     },
+    test_suites: [
+        "general-tests",
+        "mts-uprobestats",
+    ],
 }
