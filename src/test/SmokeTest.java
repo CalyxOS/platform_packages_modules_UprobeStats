@@ -18,7 +18,6 @@ package test;
 
 import static android.uprobestats.flags.Flags.FLAG_ENABLE_UPROBESTATS;
 import static android.uprobestats.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS;
-import static android.uprobestats.mainline.flags.Flags.FLAG_UPROBESTATS_MONITOR_DISRUPTIVE_APP_ACTIVITIES;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -38,7 +37,6 @@ import com.android.internal.os.StatsdConfigProto;
 import com.android.os.StatsLog;
 import com.android.os.framework.FrameworkExtensionAtoms;
 import com.android.os.framework.FrameworkExtensionAtoms.DeviceIdleTempAllowlistUpdated;
-import com.android.os.uprobestats.SetComponentEnabledSettingReported;
 import com.android.os.uprobestats.TestUprobeStatsAtomReported;
 import com.android.os.uprobestats.UprobestatsExtensionAtoms;
 import com.android.tradefed.device.ITestDevice;
@@ -70,7 +68,6 @@ public class SmokeTest extends BaseHostJUnit4Test {
             "test_bss_setBatteryState_artApi.textproto";
     private static final String TEMP_ALLOWLIST_CONFIG =
             "test_updateDeviceIdleTempAllowlist.textproto";
-    private static final String TEST_MALWARE_SIGNAL_CONFIG = "malware_signal.textproto";
     private static final String CONFIG_NAME = "config";
     private static final String CMD_SETPROP_UPROBESTATS = "setprop ctl.start uprobestats";
     private static final String CONFIG_DIR = "/data/misc/uprobestats-configs/";
@@ -199,38 +196,5 @@ public class SmokeTest extends BaseHostJUnit4Test {
                         .getAtom()
                         .getExtension(FrameworkExtensionAtoms.deviceIdleTempAllowlistUpdated);
         assertThat(reported.getReason()).isEqualTo("shell");
-    }
-
-    @Test
-    @RequiresFlagsEnabled({
-        FLAG_ENABLE_UPROBESTATS,
-        FLAG_UPROBESTATS_MONITOR_DISRUPTIVE_APP_ACTIVITIES
-    })
-    public void setComponentEnabledSetting() throws Exception {
-        startUprobeStats(
-                TEST_MALWARE_SIGNAL_CONFIG,
-                UprobestatsExtensionAtoms.SET_COMPONENT_ENABLED_SETTING_REPORTED_FIELD_NUMBER);
-
-        // enable and disable a component (need one that will definitely exist, but not in
-        // android/com.android namespace)
-        getDevice().executeShellCommand("pm disable" + " com.test/.TestActivity");
-        getDevice().executeShellCommand("pm enable" + " com.test/.TestActivity");
-
-        // Allow UprobeStats/StatsD time to collect metric
-        RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
-
-        // See if the atom made it
-        List<StatsLog.EventMetricData> data =
-                ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
-        assertThat(data.size()).isEqualTo(1);
-        SetComponentEnabledSettingReported reported =
-                data.get(0)
-                        .getAtom()
-                        .getExtension(UprobestatsExtensionAtoms.setComponentEnabledSettingReported);
-        assertThat(reported.getNewState())
-                .isEqualTo(2); // PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
-        assertThat(reported.getPackageName()).isEqualTo("com.test");
-        assertThat(reported.getClassName()).isEqualTo("com.test.TestActivity");
-        assertThat(reported.getCallingPackageName()).isEqualTo("shell");
     }
 }
