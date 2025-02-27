@@ -84,8 +84,8 @@ void getLibFunction(void *handle, const char *identifier, T *out) {
 }
 
 std::optional<ExecutableMethodFileOffsets>
-getExecutableMethodFileOffsets(std::string &processName, std::string &fqcn,
-                               std::string &methodName,
+getExecutableMethodFileOffsets(int pid, int uid, std::string &processName,
+                               std::string &fqcn, std::string &methodName,
                                std::vector<std::string> &fqParameters) {
   void *handle = dlopen(kLibandroidPath, RTLD_NOW | RTLD_LOCAL);
   if (!handle) {
@@ -140,7 +140,7 @@ getExecutableMethodFileOffsets(std::string &processName, std::string &fqcn,
                  &getMethodOffset);
 
   const ADynamicInstrumentationManager_TargetProcess *targetProcess =
-      targetProcess_create(0, 0, processName.c_str());
+      targetProcess_create(uid, pid, processName.c_str());
 
   std::vector<const char *> fqpVec;
   for (size_t i = 0; i < fqParameters.size(); ++i) {
