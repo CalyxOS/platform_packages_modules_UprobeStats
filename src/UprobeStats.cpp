@@ -25,10 +25,8 @@
 #include <android/binder_process.h>
 #include <android_uprobestats_mainline_flags.h>
 #include <config.pb.h>
-#include <stats_event.h>
-#include <stdio.h>
-
 #include <iostream>
+#include <stdio.h>
 #include <string>
 #include <thread>
 
@@ -37,7 +35,7 @@
 #include "DebugLog.h"
 #include "FlagSelector.h"
 #include "Guardrail.h"
-#include "statslog_uprobestats.h"
+#include <stats_event.h>
 
 using namespace android::uprobestats;
 
@@ -51,7 +49,6 @@ const std::string kProcessManagementMap =
     std::string("ProcessManagement_output_buf");
 const std::string kMalwareSignalMap = std::string("MalwareSignal_output_buf");
 const int kJavaArgumentRegisterOffset = 2;
-const int kFirstApplicationUid = 10000;  // Process.FIRST_APPLICATION_UID
 
 bool isUprobestatsEnabled() {
   return android::uprobestats::flag_selector::enable_uprobestats();
@@ -196,42 +193,20 @@ void doPoll(PollArgs args) {
           bpf::pollRingBuf<bpf::MalwareSignal>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         if (value.component_enabled_setting.initialized == true) {
-          if (value.component_enabled_setting.new_state >= 2 &&
-              !startsWith(value.component_enabled_setting.package_name,
-                          "android") &&
-              !startsWith(value.component_enabled_setting.package_name,
-                          "com.android")) {
-            LOG_IF_DEBUG(
-                "ComponentEnabledSetting: package_name="
-                << value.component_enabled_setting.package_name
-                << " class_name=" << value.component_enabled_setting.class_name
-                << " new_state=" << value.component_enabled_setting.new_state
-                << " calling_package_name="
-                << value.component_enabled_setting.calling_package_name);
-
-            stats_write(SET_COMPONENT_ENABLED_SETTING_REPORTED,
-                        value.component_enabled_setting.package_name,
-                        value.component_enabled_setting.class_name,
-                        value.component_enabled_setting.new_state,
-                        value.component_enabled_setting.calling_package_name);
-          }
+          LOG_IF_DEBUG(
+              "ComponentEnabledSetting: package_name="
+              << value.component_enabled_setting.package_name
+              << " class_name=" << value.component_enabled_setting.class_name
+              << " new_state=" << value.component_enabled_setting.new_state
+              << " calling_package_name="
+              << value.component_enabled_setting.calling_package_name);
         }
         if (value.wm_bound_uid.initialized == true) {
-          if (value.wm_bound_uid.client_uid >= kFirstApplicationUid &&
-              !startsWith(value.wm_bound_uid.client_package_name, "android") &&
-              !startsWith(value.wm_bound_uid.client_package_name,
-                          "com.android")) {
-            LOG_IF_DEBUG("WmBoundUid: clientUid:"
-                         << value.wm_bound_uid.client_uid
-                         << " clientPackageName:"
-                         << value.wm_bound_uid.client_package_name
-                         << " bindFlags:" << value.wm_bound_uid.bind_flags);
-
-            stats_write(BAL_PROCESS_CONTROLLER_ADD_BOUND_CLIENT_UID_REPORTED,
-                        value.wm_bound_uid.client_uid,
-                        value.wm_bound_uid.client_package_name,
-                        value.wm_bound_uid.bind_flags);
-          }
+          LOG_IF_DEBUG(
+              "WmBoundUid: clientUid:" << value.wm_bound_uid.client_uid);
+          LOG_IF_DEBUG(
+              "clientPackageName:" << value.wm_bound_uid.client_package_name);
+          LOG_IF_DEBUG("bindFlags:" << value.wm_bound_uid.bind_flags);
         }
       }
     } else {
