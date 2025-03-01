@@ -51,6 +51,28 @@ struct UpdateDeviceIdleTempAllowlistRecord {
   int calling_uid;
 };
 
+#pragma pack(push, 1) // Pack structs with 1-byte boundary
+struct WmBoundUid {
+  __u64 client_uid;
+  char client_package_name[64];
+  unsigned long bind_flags;
+  bool initialized;
+};
+
+struct ComponentEnabledSetting {
+  char package_name[64];
+  char class_name[64];
+  int new_state;
+  char calling_package_name[64];
+  bool initialized;
+};
+
+struct MalwareSignal {
+  struct WmBoundUid wm_bound_uid;
+  struct ComponentEnabledSetting component_enabled_setting;
+};
+#pragma pack(pop)
+
 template <typename T>
 std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs);
 
