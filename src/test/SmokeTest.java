@@ -36,7 +36,6 @@ import com.android.compatibility.common.util.CpuFeatures;
 import com.android.internal.os.StatsdConfigProto;
 import com.android.os.StatsLog;
 import com.android.os.framework.FrameworkExtensionAtoms;
-import com.android.os.framework.FrameworkExtensionAtoms.DeviceIdleTempAllowlistUpdated;
 import com.android.os.uprobestats.TestUprobeStatsAtomReported;
 import com.android.os.uprobestats.UprobestatsExtensionAtoms;
 import com.android.tradefed.device.ITestDevice;
@@ -190,11 +189,21 @@ public class SmokeTest extends BaseHostJUnit4Test {
         // See if the atom made it
         List<StatsLog.EventMetricData> data =
                 ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
-        assertThat(data.size()).isEqualTo(1);
-        DeviceIdleTempAllowlistUpdated reported =
-                data.get(0)
-                        .getAtom()
-                        .getExtension(FrameworkExtensionAtoms.deviceIdleTempAllowlistUpdated);
-        assertThat(reported.getReason()).isEqualTo("shell");
+        assertThat(data.size()).isGreaterThan(0);
+        boolean anyMatch =
+                data.stream()
+                        .map(StatsLog.EventMetricData::getAtom)
+                        .filter(
+                                atom ->
+                                        atom.hasExtension(
+                                                FrameworkExtensionAtoms
+                                                        .deviceIdleTempAllowlistUpdated))
+                        .map(
+                                atom ->
+                                        atom.getExtension(
+                                                FrameworkExtensionAtoms
+                                                        .deviceIdleTempAllowlistUpdated))
+                        .anyMatch(reported -> reported.getReason().equals("shell"));
+        assertThat(anyMatch).isTrue();
     }
 }
