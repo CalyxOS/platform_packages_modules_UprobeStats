@@ -1,0 +1,4 @@
+rust_defaults {
+    name: "uprobestats_rust_defaults",
+    rustlibs: ["libanyhow"],
+}
