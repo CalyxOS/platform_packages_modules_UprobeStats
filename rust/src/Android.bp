@@ -4,9 +4,11 @@ rust_library {
     defaults: ["uprobestats_rust_defaults"],
     srcs: ["lib.rs"],
     rustlibs: [
+        "libdynamic_instrumentation_manager",
         "liblog_rust",
         "liblogger",
         "libprotobuf",
+        "libuprobestats_proto",
         "librustutils",
         "libserde_json",
     ],

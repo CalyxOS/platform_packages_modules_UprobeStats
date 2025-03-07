@@ -3,7 +3,7 @@
 use std::fs::{read, read_dir};
 
 /// return PID given name
-pub fn get_pid(process_name: &str) -> Option<i32> {
+pub(crate) fn get_pid(process_name: &str) -> Option<i32> {
     for entry in read_dir("/proc").ok()? {
         let entry = entry.ok()?;
         let path = entry.path();

@@ -1,3 +1,4 @@
 //! UprobeStats library
-pub mod art;
-pub mod process;
+mod art;
+pub mod config_resolver;
+mod process;

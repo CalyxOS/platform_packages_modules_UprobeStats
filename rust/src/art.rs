@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::process::{Command, Stdio};
 
 /// Gets the precompiled offset of the given method (which should be present in the given file on device)
-pub fn get_method_offset_from_oatdump(
+pub(crate) fn get_method_offset_from_oatdump(
     oat_file: &str,
     method_signature: &str,
 ) -> Result<Option<i32>> {

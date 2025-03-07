@@ -206,3 +206,10 @@ cc_test {
         "mts-uprobestats",
     ],
 }
+
+rust_protobuf {
+    name: "libuprobestats_proto",
+    crate_name: "uprobestats_proto",
+    protos: ["config.proto"],
+    source_stem: "libuprobestats_proto",
+}
