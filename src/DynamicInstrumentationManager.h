@@ -16,17 +16,21 @@
 
 #pragma once
 
-#include <config.pb.h>
-#include <string>
+#import <optional>
+#import <string>
+#import <vector>
 
-namespace android {
-namespace uprobestats {
-namespace guardrail {
+namespace android::uprobestats::dynamic_instrumentation_manager {
 
-bool isAllowed(const ::uprobestats::protos::UprobestatsConfig &config,
-               const std::string &buildType,
-               bool executableMethodFileOffsetsApiEnabled);
+struct ExecutableMethodFileOffsets {
+  std::string containerPath;
+  uint64_t containerOffset;
+  uint64_t methodOffset;
+};
 
-} // namespace guardrail
-} // namespace uprobestats
-} // namespace android
+std::optional<ExecutableMethodFileOffsets>
+getExecutableMethodFileOffsets(std::string &processName, std::string &fqcn,
+                               std::string &methodName,
+                               std::vector<std::string> &fqParameters);
+
+} // namespace android::uprobestats::dynamic_instrumentation_manager

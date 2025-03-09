@@ -10,37 +10,112 @@ aconfig_declarations {
     srcs: ["flag.aconfig"],
 }
 
+aconfig_declarations {
+    name: "uprobestats_mainline_flags",
+    package: "android.uprobestats.mainline.flags",
+    container: "com.android.uprobestats",
+    srcs: ["mainline-flag.aconfig"],
+}
+
 cc_aconfig_library {
     name: "uprobestats_flags_c_lib",
     aconfig_declarations: "uprobestats_flags",
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
 }
 
-cc_library {
+cc_aconfig_library {
+    name: "uprobestats_mainline_flags_c_lib",
+    aconfig_declarations: "uprobestats_mainline_flags",
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
+}
+
+java_aconfig_library {
+    name: "uprobestats_flags_java_lib",
+    aconfig_declarations: "uprobestats_flags",
+    host_supported: true,
+}
+
+java_aconfig_library {
+    name: "art_flags_uprobestats_java_lib",
+    aconfig_declarations: "art-aconfig-flags",
+    host_supported: true,
+}
+
+java_aconfig_library {
+    name: "uprobestats_mainline_flags_java_lib",
+    aconfig_declarations: "uprobestats_mainline_flags",
+    host_supported: true,
+    visibility: [
+        "//cts/hostsidetests/statsdatom:__subpackages__",
+    ],
+}
+
+soong_config_module_type {
+    name: "uprobestats_cc_library",
+    module_type: "cc_library",
+    config_namespace: "ANDROID",
+    bool_variables: [
+        "release_uprobestats_module",
+    ],
+    properties: [
+        "cflags",
+    ],
+}
+
+soong_config_bool_variable {
+    name: "release_uprobestats_module",
+}
+
+uprobestats_cc_library {
     name: "libuprobestats",
+    soong_config_variables: {
+        release_uprobestats_module: {
+            cflags: [
+                "-DUPROBESTATS_IN_MAINLINE=1",
+            ],
+        },
+    },
     srcs: [
         "Art.cpp",
         "Bpf.cpp",
         "ConfigResolver.cpp",
+        "DynamicInstrumentationManager.cpp",
+        "FlagSelector.cpp",
         "Process.cpp",
         "Guardrail.cpp",
         "config.proto",
     ],
     header_libs: [
-        "bpf_headers",
+        "uprobestats_bpf_headers",
     ],
     shared_libs: [
+        "libandroid",
+        "libbinder_ndk",
         "libbase",
         "liblog",
     ],
     static_libs: [
-        "libc++fs",
         "libjsoncpp",
         "uprobestats_flags_c_lib",
+        "uprobestats_mainline_flags_c_lib",
     ],
     proto: {
         export_proto_headers: true,
         type: "lite",
     },
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
 }
 
 cc_binary {
@@ -50,28 +125,53 @@ cc_binary {
         "config.proto",
     ],
     static_libs: [
-        "libc++fs",
         "libjsoncpp",
         "libprotoutil",
         "libuprobestats",
         "uprobestats_flags_c_lib",
+        "uprobestats_mainline_flags_c_lib",
     ],
     shared_libs: [
+        "libandroid",
         "libbase",
+        "libbinder_ndk",
         "liblog",
         "libstatssocket",
     ],
     init_rc: [
-        "UprobeStats.rc",
+        "UprobeStats-platform.rc",
     ],
-    required: [
-        "BitmapAllocation.o",
-        "GenericInstrumentation.o",
-        "ProcessManagement.o",
-    ],
+    required: select(release_flag("RELEASE_UPROBESTATS_MODULE"), {
+        true: [],
+        false: [
+            "BitmapAllocation.o",
+            "GenericInstrumentation.o",
+            "ProcessManagement.o",
+        ],
+    }),
+
     proto: {
         type: "lite",
         static: true,
+    },
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+
+    min_sdk_version: "35",
+}
+
+java_library_host {
+    name: "uprobestats-protos",
+    srcs: [
+        "config.proto",
+    ],
+    proto: {
+        include_dirs: [
+            "external/protobuf/src",
+        ],
+        type: "full",
     },
 }
 
@@ -96,11 +196,16 @@ java_test_host {
         "cts-statsd-atom-host-test-utils",
         "flag-junit-host",
         "perfetto_config-full",
+        "art_flags_uprobestats_java_lib",
+        "uprobestats_flags_java_lib",
     ],
     proto: {
         type: "full",
     },
-    test_suites: ["general-tests"],
+    test_suites: [
+        "general-tests",
+        "mts-uprobestats",
+    ],
 }
 
 python_binary_host {

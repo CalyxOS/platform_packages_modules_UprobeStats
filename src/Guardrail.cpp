@@ -34,20 +34,33 @@ constexpr std::array kAllowedMethodPrefixes = {
 
 } // namespace
 
+std::string getFullMethodName(
+    const ::uprobestats::protos::UprobestatsConfig::Task::ProbeConfig
+        &probeConfig,
+    bool executabeMethodFileOffsetsApiEnabled) {
+  if (executabeMethodFileOffsetsApiEnabled &&
+      probeConfig.has_fully_qualified_class_name()) {
+    return probeConfig.fully_qualified_class_name() + "." +
+           probeConfig.method_name();
+  }
+  const string &methodSignature = probeConfig.method_signature();
+  std::vector<string> components = android::base::Split(methodSignature, " ");
+  if (components.size() < 2) {
+    return "";
+  }
+  return components[1];
+}
+
 bool isAllowed(const ::uprobestats::protos::UprobestatsConfig &config,
-               const string &buildType) {
+               const string &buildType,
+               bool executabeMethodFileOffsetsApiEnabled) {
   if (buildType != "user") {
     return true;
   }
   for (const auto &task : config.tasks()) {
     for (const auto &probeConfig : task.probe_configs()) {
-      const string &methodSignature = probeConfig.method_signature();
-      std::vector<string> components =
-          android::base::Split(methodSignature, " ");
-      if (components.size() < 2) {
-        return false;
-      }
-      const string &fullMethodName = components[1];
+      const string &fullMethodName =
+          getFullMethodName(probeConfig, executabeMethodFileOffsetsApiEnabled);
       bool allowed = false;
       for (const std::string allowedPrefix : kAllowedMethodPrefixes) {
         if (android::base::StartsWith(fullMethodName, allowedPrefix + ".") ||

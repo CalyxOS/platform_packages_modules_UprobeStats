@@ -42,7 +42,7 @@ std::optional<ResolvedTask>
 resolveSingleTask(::uprobestats::protos::UprobestatsConfig config);
 
 std::optional<std::vector<ResolvedProbe>>
-resolveProbes(::uprobestats::protos::UprobestatsConfig::Task taskConfig);
+resolveProbes(::uprobestats::protos::UprobestatsConfig::Task &taskConfig);
 
 } // namespace config_resolver
 } // namespace uprobestats

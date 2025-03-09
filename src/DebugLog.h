@@ -14,19 +14,11 @@
  * limitations under the License.
  */
 
-#pragma once
+const bool kDebug = false;
 
-#include <config.pb.h>
-#include <string>
-
-namespace android {
-namespace uprobestats {
-namespace guardrail {
-
-bool isAllowed(const ::uprobestats::protos::UprobestatsConfig &config,
-               const std::string &buildType,
-               bool executableMethodFileOffsetsApiEnabled);
-
-} // namespace guardrail
-} // namespace uprobestats
-} // namespace android
+#define LOG_IF_DEBUG(msg)                                                      \
+  do {                                                                         \
+    if (kDebug) {                                                              \
+      LOG(INFO) << msg;                                                        \
+    }                                                                          \
+  } while (0)
