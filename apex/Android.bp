@@ -66,5 +66,4 @@ apex {
     key: "com.android.uprobestats.key",
     certificate: ":com.android.uprobestats.certificate",
     defaults: ["b-launched-apex-module"],
-    min_sdk_version: "36",
 }
