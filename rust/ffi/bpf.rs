@@ -16,14 +16,13 @@
 
 //! Functions to interact with BPF through C FFI.
 
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{ensure, Result};
 use uprobestats_bpf_bindgen::{bpfPerfEventOpen, pollRingBuf};
 
-use std::{
-    ffi::{c_void, CString},
-    fmt::Debug,
-    mem::size_of,
-};
+use std::{ffi::c_void, fmt::Debug, mem::size_of};
+
+mod c_string;
+use c_string::c_string;
 
 /// Polls the BPF ring buffer at the passed `map_path`, collecting any values
 /// emitted within `timeout_ms` into a `Vec<T>`, where `T` is expected to be
@@ -79,8 +78,4 @@ pub fn bpf_perf_event_open(
         unsafe { bpfPerfEventOpen(filename.as_ptr(), offset, pid, bpf_program_path.as_ptr()) };
     ensure!(res == 0, "Failed to attach BPF. Error code: {}", res);
     Ok(())
-}
-
-fn c_string(string: &str) -> Result<CString> {
-    CString::new(string.as_bytes()).map_err(|e| anyhow!("Failed to create CString: {e}"))
 }
