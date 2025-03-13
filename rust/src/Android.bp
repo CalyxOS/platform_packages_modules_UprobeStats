@@ -1,0 +1,14 @@
+rust_library {
+    name: "libuprobestats_rs",
+    crate_name: "uprobestats_rs",
+    srcs: ["lib.rs"],
+    rustlibs: [
+        "liblog_rust",
+        "liblogger",
+        "libprotobuf",
+        //"libuprobestats_proto",
+        "librustutils",
+        "libserde_json",
+        //"libuprobestats_flags_rust",
+    ],
+}
