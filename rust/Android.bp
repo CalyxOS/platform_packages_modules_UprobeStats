@@ -1,4 +1,9 @@
 rust_defaults {
     name: "uprobestats_rust_defaults",
     rustlibs: ["libanyhow"],
+    apex_available: [
+        "//apex_available:platform",
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "36",
 }
