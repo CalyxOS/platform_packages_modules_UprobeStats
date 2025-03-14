@@ -8,9 +8,11 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-use uprobestats_bpf::{bpf_perf_event_open, poll_ring_buf};
-use uprobestats_bpf_bindgen::CallTimestamp;
+use uprobestats_bpf::bpf_perf_event_open;
 use uprobestats_rs::config_resolver;
+
+mod bpf_map;
+use bpf_map::poll_and_loop;
 
 fn main() {
     logger::init(
@@ -25,8 +27,7 @@ fn main() {
     };
 }
 
-/// Execute Uprobestats.
-pub fn main_impl() -> Result<()> {
+fn main_impl() -> Result<()> {
     debug!("started");
 
     ensure!(is_uprobestats_enabled(), "Uprobestats disabled by flag");
@@ -37,7 +38,7 @@ pub fn main_impl() -> Result<()> {
 
     ProcessState::start_thread_pool();
 
-    let probes = config_resolver::resolve_probes(task.task)?;
+    let probes = config_resolver::resolve_probes(&task.task)?;
     for probe in probes {
         bpf_perf_event_open(
             probe.filename.clone(),
@@ -57,7 +58,12 @@ pub fn main_impl() -> Result<()> {
 
     let results = task.bpf_map_paths.into_iter().map(|map_path| {
         debug!("Spawning thread for map_path: {}", map_path);
-        match thread::spawn(move || poll_and_loop(map_path.clone(), now, duration)).join() {
+        match thread::spawn({
+            let task_proto = task.task.clone();
+            move || poll_and_loop(&map_path, now, duration, task_proto)
+        })
+        .join()
+        {
             Ok(result) => result.map_err(|e| anyhow!("Thread error: {}", e)),
             Err(panic) => bail!("Thread panic: {:?}", panic),
         }
@@ -78,36 +84,6 @@ pub fn main_impl() -> Result<()> {
 
     debug!("done");
 
-    Ok(())
-}
-
-fn poll_and_loop(map_path: String, now: Instant, duration: Duration) -> Result<()> {
-    ensure!(
-        &map_path.ends_with("GenericInstrumentation_call_timestamp_buf"),
-        "unsupported map_path: {}",
-        map_path
-    );
-
-    let duration_millis = duration.as_millis();
-    let mut elapsed_millis = now.elapsed().as_millis();
-    while elapsed_millis <= duration_millis {
-        let timeout_millis = duration_millis - elapsed_millis;
-        let timeout_millis: i32 = timeout_millis.try_into()?;
-        debug!("polling {} for {} seconds", map_path, timeout_millis / 1000);
-        // SAFETY: only GenericInstrumentation_call_timestamp_buf currently supported,
-        // which writes `CallTimestamp` structs.
-        let result: Result<Vec<CallTimestamp>> =
-            unsafe { poll_ring_buf(map_path.clone(), timeout_millis) };
-        let result = result?;
-        debug!("Done polling, event count: {}", result.len());
-        for i in result {
-            debug!(
-                "Ringbuf result callback. event: {} timestamp_ns: {} map_path: {}",
-                i.event, i.timestampNs, map_path
-            );
-        }
-        elapsed_millis = now.elapsed().as_millis();
-    }
     Ok(())
 }
 

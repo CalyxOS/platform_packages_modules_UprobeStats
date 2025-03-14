@@ -23,7 +23,10 @@ rust_binary {
     srcs: ["main.rs"],
     defaults: ["uprobestats_rust_defaults"],
     rustlibs: [
+        "libstatssocket_rs",
         "libuprobestats_rs",
+        "libuprobestats_proto",
+        "libprotobuf",
         "libbinder_rs",
         "liblog_rust",
         "liblogger",

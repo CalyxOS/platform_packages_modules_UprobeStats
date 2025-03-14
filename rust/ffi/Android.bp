@@ -68,6 +68,7 @@ rust_library {
 
 rust_bindgen {
     name: "libstatssocket_bindgen",
+    defaults: ["uprobestats_rust_defaults"],
     wrapper_src: "statslog_wrapper.h",
     crate_name: "statssocket_bindgen",
     source_stem: "bindings",

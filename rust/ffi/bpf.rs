@@ -30,8 +30,8 @@ use c_string::c_string;
 ///
 /// # Safety
 ///   - `T` matches the type that is written to the BPF ring buffer at `map_path`.
-pub unsafe fn poll_ring_buf<T: Copy + Debug>(map_path: String, timeout_ms: i32) -> Result<Vec<T>> {
-    let map_path = c_string(&map_path)?;
+pub unsafe fn poll_ring_buf<T: Copy + Debug>(map_path: &str, timeout_ms: i32) -> Result<Vec<T>> {
+    let map_path = c_string(map_path)?;
     let mut data: Vec<T> = Vec::new();
     let data_ptr = &mut data as *mut _ as *mut c_void;
     // SAFETY:
