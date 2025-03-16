@@ -55,3 +55,21 @@ rust_bindgen {
     source_stem: "bindings",
     shared_libs: ["libandroid"],
 }
+
+rust_library {
+    name: "libstatssocket_rs",
+    defaults: ["uprobestats_rust_defaults"],
+    crate_name: "statssocket",
+    srcs: ["statssocket.rs"],
+    rustlibs: [
+        "libstatssocket_bindgen",
+    ],
+}
+
+rust_bindgen {
+    name: "libstatssocket_bindgen",
+    wrapper_src: "statslog_wrapper.h",
+    crate_name: "statssocket_bindgen",
+    source_stem: "bindings",
+    shared_libs: ["libstatssocket"],
+}
