@@ -24,7 +24,7 @@ cc_aconfig_library {
         "//apex_available:platform",
         "com.android.uprobestats",
     ],
-    min_sdk_version: "35",
+    min_sdk_version: "36",
 }
 
 cc_aconfig_library {
@@ -34,7 +34,7 @@ cc_aconfig_library {
         "//apex_available:platform",
         "com.android.uprobestats",
     ],
-    min_sdk_version: "35",
+    min_sdk_version: "36",
 }
 
 java_aconfig_library {
@@ -56,6 +56,13 @@ java_aconfig_library {
     visibility: [
         "//cts/hostsidetests/statsdatom:__subpackages__",
     ],
+}
+
+rust_aconfig_library {
+    name: "libuprobestats_mainline_flags_rust",
+    crate_name: "uprobestats_mainline_flags_rust",
+    defaults: ["uprobestats_rust_defaults"],
+    aconfig_declarations: "uprobestats_mainline_flags",
 }
 
 soong_config_module_type {
@@ -120,6 +127,7 @@ uprobestats_cc_library {
 
 cc_binary {
     name: "uprobestats",
+    enabled: true,
     srcs: [
         "UprobeStats.cpp",
         "config.proto",
@@ -210,6 +218,7 @@ cc_test {
 rust_protobuf {
     name: "libuprobestats_proto",
     crate_name: "uprobestats_proto",
+    defaults: ["uprobestats_rust_defaults"],
     protos: ["config.proto"],
     source_stem: "libuprobestats_proto",
 }

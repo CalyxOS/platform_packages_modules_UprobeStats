@@ -65,8 +65,8 @@ pub fn resolve_single_task(config: UprobestatsConfig) -> Result<ResolvedTask> {
 }
 
 /// Validates a single probe proto and adds additional info.
-pub fn resolve_probes(task: Task) -> Result<Vec<ResolvedProbe>> {
-    let resolved_probes = task.probe_configs.into_iter().map(|probe| {
+pub fn resolve_probes(task: &Task) -> Result<Vec<ResolvedProbe>> {
+    let resolved_probes = task.probe_configs.clone().into_iter().map(|probe| {
         let bpf_name = probe.bpf_name.as_ref().ok_or_else(|| anyhow!("bpf_name is required"))?;
         let bpf_program_path = prefix_bpf(bpf_name);
         if let Some(ref fully_qualified_class_name) = probe.fully_qualified_class_name {

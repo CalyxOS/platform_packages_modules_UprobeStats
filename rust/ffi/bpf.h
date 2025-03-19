@@ -21,6 +21,11 @@
 
 __BEGIN_DECLS
 
+struct CallTimestamp {
+  unsigned int event;
+  unsigned long timestampNs;
+};
+
 int pollRingBuf(const char *mapPath, int timeoutMs, size_t valueSize,
                 void (*callback)(const void *, void *), void *cookie);
 int bpfPerfEventOpen(const char *filename, int offset, int pid,
