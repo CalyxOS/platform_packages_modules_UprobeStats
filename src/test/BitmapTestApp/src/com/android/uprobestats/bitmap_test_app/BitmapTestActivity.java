@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,17 @@
  * limitations under the License.
  */
 
-#pragma once
+package com.android.uprobestats.bitmap_test_app;
 
-namespace android {
-namespace uprobestats {
-namespace process {
+import android.app.Activity;
+import android.os.Bundle;
 
-bool getPidUid(const ::uprobestats::protos::UprobestatsConfig::Task &task,
-               int *pid, int *uid);
+public class BitmapTestActivity extends Activity {
+    private static final String TAG = BitmapTestActivity.class.getSimpleName();
 
-} // namespace process
-} // namespace uprobestats
-} // namespace android
+    @Override
+    public void onCreate(Bundle bundle) {
+        super.onCreate(bundle);
+        android.graphics.Bitmap.createBitmap(100, 100, android.graphics.Bitmap.Config.ARGB_8888);
+    }
+}

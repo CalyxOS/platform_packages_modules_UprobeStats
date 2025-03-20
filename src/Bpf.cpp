@@ -32,12 +32,15 @@ namespace android {
 namespace uprobestats {
 namespace bpf {
 
+const std::string kBpfPath = std::string("/sys/fs/bpf/uprobestats/");
+std::string prefixBpf(const std::string &value) { return kBpfPath + value; }
+
 const char *PMU_TYPE_FILE = "/sys/bus/event_source/devices/uprobe/type";
 
 int bpfPerfEventOpen(const char *filename, int offset, int pid,
-                     const char *bpfProgramPath) {
+                     const std::string &bpfProgramPath) {
   android::base::unique_fd bpfProgramFd(
-      android::bpf::retrieveProgram(bpfProgramPath));
+      android::bpf::retrieveProgram(prefixBpf(bpfProgramPath).c_str()));
   if (bpfProgramFd < 0) {
     LOG(ERROR) << "retrieveProgram failed";
     return -1;
@@ -79,8 +82,8 @@ int bpfPerfEventOpen(const char *filename, int offset, int pid,
 }
 
 template <typename T>
-std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs) {
-  auto result = android::bpf::BpfRingbuf<T>::Create(mapPath);
+std::vector<T> pollRingBuf(const std::string &mapPath, int timeoutMs) {
+  auto result = android::bpf::BpfRingbuf<T>::Create(prefixBpf(mapPath).c_str());
   std::vector<T> vec;
   if (!result.value()->wait(timeoutMs)) {
     return vec;
@@ -90,37 +93,26 @@ std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs) {
   return vec;
 }
 
-template std::vector<uint64_t> pollRingBuf(const char *mapPath, int timeoutMs);
-template std::vector<CallResult> pollRingBuf(const char *mapPath,
+template std::vector<uint64_t> pollRingBuf(const std::string &mapPath,
+                                           int timeoutMs);
+template std::vector<CallResult> pollRingBuf(const std::string &mapPath,
                                              int timeoutMs);
-template std::vector<CallTimestamp> pollRingBuf(const char *mapPath,
+template std::vector<CallTimestamp> pollRingBuf(const std::string &mapPath,
                                                 int timeoutMs);
 template std::vector<SetUidTempAllowlistStateRecord>
-pollRingBuf(const char *mapPath, int timeoutMs);
+pollRingBuf(const std::string &mapPath, int timeoutMs);
 
 template std::vector<UpdateDeviceIdleTempAllowlistRecord>
-pollRingBuf(const char *mapPath, int timeoutMs);
+pollRingBuf(const std::string &mapPath, int timeoutMs);
 
-template std::vector<MalwareSignal> pollRingBuf(const char *mapPath,
+template std::vector<MalwareSignal> pollRingBuf(const std::string &mapPath,
                                                 int timeoutMs);
 
-std::vector<int32_t> consumeRingBuf(const char *mapPath) {
-  auto result = android::bpf::BpfRingbuf<uint64_t>::Create(mapPath);
-  std::vector<int32_t> vec;
-  auto callback = [&](const uint64_t &value) { vec.push_back(value); };
-  result.value()->ConsumeAll(callback);
-  return vec;
-}
+template std::vector<ProcessChange> pollRingBuf(const std::string &mapPath,
+                                                int timeoutMs);
 
-void printRingBuf(const char *mapPath) {
-  auto result = android::bpf::BpfRingbuf<uint64_t>::Create(mapPath);
-  auto callback = [&](const uint64_t &value) {
-    LOG(INFO) << "ringbuf result callback. value: " << value
-              << " mapPath: " << mapPath;
-  };
-  int numConsumed = result.value()->ConsumeAll(callback).value_or(-1);
-  LOG(INFO) << "ring buffer size: " << numConsumed << " mapPath: " << mapPath;
-}
+template std::vector<BitmapCreation> pollRingBuf(const std::string &mapPath,
+                                                 int timeoutMs);
 
 } // namespace bpf
 } // namespace uprobestats
