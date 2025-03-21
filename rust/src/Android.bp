@@ -36,3 +36,20 @@ rust_binary {
         "libuprobestats_mainline_flags_rust",
     ],
 }
+
+rust_test {
+    name: "uprobestats_rs_test",
+    srcs: ["lib.rs"],
+    defaults: ["uprobestats_rust_defaults"],
+    rustlibs: [
+        "libuprobestats_rs",
+        "libdynamic_instrumentation_manager",
+        "liblog_rust",
+        "liblogger",
+        "libprotobuf",
+        "libuprobestats_bpf",
+        "libuprobestats_proto",
+        "librustutils",
+        "libserde_json",
+    ],
+}

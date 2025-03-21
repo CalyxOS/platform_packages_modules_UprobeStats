@@ -1,3 +1,8 @@
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+    default_team: "trendy_team_system_performance",
+}
+
 rust_defaults {
     name: "uprobestats_rust_defaults",
     rustlibs: ["libanyhow"],
