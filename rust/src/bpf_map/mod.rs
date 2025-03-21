@@ -1,7 +1,5 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use log::debug;
-use protobuf::MessageField;
-use statssocket::AStatsEvent;
 use std::{
     collections::HashMap,
     fmt::Debug,
@@ -9,8 +7,15 @@ use std::{
     time::{Duration, Instant},
 };
 use uprobestats_bpf::poll_ring_buf;
-use uprobestats_bpf_bindgen::CallTimestamp;
+use uprobestats_bpf_bindgen::{
+    CallResult, CallTimestamp, MalwareSignal, SetUidTempAllowlistStateRecord,
+    UpdateDeviceIdleTempAllowlistRecord,
+};
 use uprobestats_proto::config::uprobestats_config::Task;
+
+mod generic_instrumentation;
+mod malware_signal;
+mod process_management;
 
 pub(crate) fn poll_and_loop(
     map_path: &str,
@@ -49,6 +54,8 @@ fn poll<T: OnItem + Debug + Copy>(map_path: &str, timeout_millis: i32, task: &Ta
     Ok(())
 }
 
+const JAVA_ARGUMENT_REGISTER_OFFSET: i32 = 2;
+
 /// Interface for reading items out of a BPF ring buffer.
 /// # Safety
 /// There *must* exist a BPF ring buffer at the path represented by `MAP_PATH`
@@ -67,32 +74,9 @@ fn register<T: OnItem + Debug + Copy>(registry: &mut Registry) {
 static REGISTRY: LazyLock<Registry> = LazyLock::new(|| {
     let mut map = HashMap::new();
     register::<CallTimestamp>(&mut map);
+    register::<CallResult>(&mut map);
+    register::<MalwareSignal>(&mut map);
+    register::<SetUidTempAllowlistStateRecord>(&mut map);
+    register::<UpdateDeviceIdleTempAllowlistRecord>(&mut map);
     map
 });
-
-/// SAFETY: `CallTimestamp` is a struct defined in the given `MAP_PATH`, and is guaranteed to match the
-/// layout of the corresponding C struct.
-unsafe impl OnItem for CallTimestamp {
-    const MAP_PATH: &str = "/sys/fs/bpf/uprobestats/map_GenericInstrumentation_call_timestamp_buf";
-    fn on_item(&self, task: &Task) -> Result<()> {
-        debug!("CallTimestamp - event: {}, timestamp_ns: {}", self.event, self.timestampNs,);
-
-        let MessageField(Some(ref statsd_logging_config)) = task.statsd_logging_config else {
-            return Ok(());
-        };
-
-        debug!("has logging config");
-        let atom_id = statsd_logging_config
-            .atom_id
-            .ok_or(anyhow!("atom_id required if statsd_logging_config provided"))?;
-
-        debug!("attempting to write atom id: {}", atom_id);
-        let mut event = AStatsEvent::new(atom_id.try_into()?);
-        event.write_int32(self.event.try_into()?);
-        event.write_int64(self.timestampNs.try_into()?);
-        event.write();
-        debug!("successfully wrote atom id: {}", atom_id);
-
-        Ok(())
-    }
-}
