@@ -67,6 +67,7 @@ bool isAllowed(const ::uprobestats::protos::UprobestatsConfig &config,
       for (const std::string allowedPrefix : kAllowedMethodPrefixes) {
         if (android::base::StartsWith(fullMethodName, allowedPrefix + ".") ||
             android::base::StartsWith(fullMethodName, allowedPrefix + "$") ||
+            android::base::StartsWith(fullMethodName, allowedPrefix + "(") ||
             fullMethodName == allowedPrefix) {
           allowed = true;
           break;

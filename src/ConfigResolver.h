@@ -29,6 +29,7 @@ struct ResolvedProbe {
 struct ResolvedTask {
   ::uprobestats::protos::UprobestatsConfig::Task taskConfig;
   int pid;
+  int uid;
 };
 
 std::ostream &operator<<(std::ostream &os, const ResolvedTask &c);
@@ -42,7 +43,8 @@ std::optional<ResolvedTask>
 resolveSingleTask(::uprobestats::protos::UprobestatsConfig config);
 
 std::optional<std::vector<ResolvedProbe>>
-resolveProbes(::uprobestats::protos::UprobestatsConfig::Task &taskConfig);
+resolveProbes(::uprobestats::protos::UprobestatsConfig::Task &taskConfig,
+              int pid, int uid);
 
 } // namespace config_resolver
 } // namespace uprobestats

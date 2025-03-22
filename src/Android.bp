@@ -24,7 +24,7 @@ cc_aconfig_library {
         "//apex_available:platform",
         "com.android.uprobestats",
     ],
-    min_sdk_version: "35",
+    min_sdk_version: "36",
 }
 
 cc_aconfig_library {
@@ -34,7 +34,7 @@ cc_aconfig_library {
         "//apex_available:platform",
         "com.android.uprobestats",
     ],
-    min_sdk_version: "35",
+    min_sdk_version: "36",
 }
 
 java_aconfig_library {
@@ -55,7 +55,15 @@ java_aconfig_library {
     host_supported: true,
     visibility: [
         "//cts/hostsidetests/statsdatom:__subpackages__",
+        "//packages/modules/UprobeStats:__subpackages__",
     ],
+}
+
+rust_aconfig_library {
+    name: "libuprobestats_mainline_flags_rust",
+    crate_name: "uprobestats_mainline_flags_rust",
+    defaults: ["uprobestats_rust_defaults"],
+    aconfig_declarations: "uprobestats_mainline_flags",
 }
 
 soong_config_module_type {
@@ -85,6 +93,7 @@ uprobestats_cc_library {
     },
     srcs: [
         "Art.cpp",
+        "BitmapInstrumentation.cpp",
         "Bpf.cpp",
         "ConfigResolver.cpp",
         "DynamicInstrumentationManager.cpp",
@@ -101,9 +110,11 @@ uprobestats_cc_library {
         "libbinder_ndk",
         "libbase",
         "liblog",
+        "libstatssocket",
     ],
     static_libs: [
         "libjsoncpp",
+        "libstatslog_uprobestats",
         "uprobestats_flags_c_lib",
         "uprobestats_mainline_flags_c_lib",
     ],
@@ -120,6 +131,7 @@ uprobestats_cc_library {
 
 cc_binary {
     name: "uprobestats",
+    enabled: true,
     srcs: [
         "UprobeStats.cpp",
         "config.proto",
@@ -128,6 +140,7 @@ cc_binary {
         "libjsoncpp",
         "libprotoutil",
         "libuprobestats",
+        "libstatslog_uprobestats",
         "uprobestats_flags_c_lib",
         "uprobestats_mainline_flags_c_lib",
     ],
@@ -210,6 +223,46 @@ cc_test {
 rust_protobuf {
     name: "libuprobestats_proto",
     crate_name: "uprobestats_proto",
+    defaults: ["uprobestats_rust_defaults"],
     protos: ["config.proto"],
     source_stem: "libuprobestats_proto",
+}
+
+cc_library_static {
+    name: "libstatslog_uprobestats",
+    generated_sources: ["statslog_uprobestats.cpp"],
+    generated_headers: ["statslog_uprobestats.h"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    export_generated_headers: ["statslog_uprobestats.h"],
+    shared_libs: [
+        "libcutils",
+        "liblog",
+        "libstatssocket",
+        "libutils",
+    ],
+    apex_available: [
+        "com.android.uprobestats",
+    ],
+    min_sdk_version: "35",
+}
+
+genrule {
+    name: "statslog_uprobestats.h",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --header $(genDir)/statslog_uprobestats.h --module uprobestats --namespace android,uprobestats",
+    out: [
+        "statslog_uprobestats.h",
+    ],
+}
+
+genrule {
+    name: "statslog_uprobestats.cpp",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --cpp $(genDir)/statslog_uprobestats.cpp --module uprobestats --namespace android,uprobestats --importHeader statslog_uprobestats.h --minApiLevel 35",
+    out: [
+        "statslog_uprobestats.cpp",
+    ],
 }
