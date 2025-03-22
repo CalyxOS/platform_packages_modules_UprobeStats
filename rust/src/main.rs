@@ -9,10 +9,9 @@ use std::{
     time::{Duration, Instant},
 };
 use uprobestats_bpf::bpf_perf_event_open;
-use uprobestats_rs::config_resolver;
+use uprobestats_rs::{config_resolver, guardrail};
 
 mod bpf_map;
-use bpf_map::poll_and_loop;
 
 fn main() {
     logger::init(
@@ -31,9 +30,12 @@ fn main_impl() -> Result<()> {
     debug!("started");
 
     ensure!(is_uprobestats_enabled(), "Uprobestats disabled by flag");
-    ensure!(!is_user_build(), "Uprobestats disabled on user build");
 
     let config = config_resolver::read_config("/data/misc/uprobestats-configs/config")?;
+    ensure!(
+        guardrail::is_allowed(&config, is_user_build(), true)?,
+        "uprobestats probing config disallowed on this device"
+    );
     let task = config_resolver::resolve_single_task(config)?;
 
     ProcessState::start_thread_pool();
@@ -60,7 +62,7 @@ fn main_impl() -> Result<()> {
         debug!("Spawning thread for map_path: {}", map_path);
         match thread::spawn({
             let task_proto = task.task.clone();
-            move || poll_and_loop(&map_path, now, duration, task_proto)
+            move || bpf_map::poll_and_loop(&map_path, now, duration, task_proto)
         })
         .join()
         {

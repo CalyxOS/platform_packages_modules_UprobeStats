@@ -67,6 +67,7 @@ public class SmokeTest extends BaseHostJUnit4Test {
             "test_bss_setBatteryState_artApi.textproto";
     private static final String TEMP_ALLOWLIST_CONFIG =
             "test_updateDeviceIdleTempAllowlist.textproto";
+    private static final String BITMAP_ALLOCATION_CONFIG = "test_bitmap.textproto";
     private static final String CONFIG_NAME = "config";
     private static final String CMD_SETPROP_UPROBESTATS = "setprop ctl.start uprobestats";
     private static final String CONFIG_DIR = "/data/misc/uprobestats-configs/";
@@ -205,5 +206,54 @@ public class SmokeTest extends BaseHostJUnit4Test {
                                                         .deviceIdleTempAllowlistUpdated))
                         .anyMatch(reported -> reported.getReason().equals("shell"));
         assertThat(anyMatch).isTrue();
+    }
+
+    @Test
+    @RequiresFlagsEnabled({
+        FLAG_ENABLE_UPROBESTATS,
+        FLAG_EXECUTABLE_METHOD_FILE_OFFSETS,
+        android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BITMAP_INSTRUMENTATION,
+        com.android.art.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS_V2
+    })
+    public void testBitmapAllocation() throws Exception {
+        installPackage("BitmapTestApp.apk");
+        assumeTrue(CpuFeatures.isArm64(getDevice()));
+        startUprobeStats(
+                BITMAP_ALLOCATION_CONFIG,
+                UprobestatsExtensionAtoms.ANDROID_GRAPHICS_BITMAP_ALLOCATED_FIELD_NUMBER);
+        try (AutoCloseable a =
+                DeviceUtils.withActivity(
+                        getDevice(),
+                        "com.android.uprobestats.bitmap_test_app",
+                        "BitmapTestActivity",
+                        "action",
+                        "action.lmk")) {
+            // Allow UprobeStats/StatsD time to collect metric
+            RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
+            // RunUtil.getDefault().sleep(60 * 1000);
+
+            // See if the atom made it
+            List<StatsLog.EventMetricData> data =
+                    ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
+            assertThat(data.size()).isGreaterThan(0);
+            boolean anyMatch =
+                    data.stream()
+                            .map(StatsLog.EventMetricData::getAtom)
+                            .filter(
+                                    atom ->
+                                            atom.hasExtension(
+                                                    UprobestatsExtensionAtoms
+                                                            .androidGraphicsBitmapAllocated))
+                            .map(
+                                    atom ->
+                                            atom.getExtension(
+                                                    UprobestatsExtensionAtoms
+                                                            .androidGraphicsBitmapAllocated))
+                            .anyMatch(
+                                    reported ->
+                                            reported.getWidth() == 100
+                                                    && reported.getHeight() == 100);
+            assertThat(anyMatch).isTrue();
+        }
     }
 }
