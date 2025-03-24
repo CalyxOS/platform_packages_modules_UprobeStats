@@ -58,7 +58,7 @@ int load(void *dest, int offset, int length, void *user_space_address) {
                              (void *)(canonical_address + offset));
 }
 
-DEFINE_BPF_RINGBUF_EXT(output, struct BitmapCreation, 2048 * 1024 * 16,
+DEFINE_BPF_RINGBUF_EXT(output, struct BitmapCreation, 16 * 1024,
                        AID_UPROBESTATS, AID_UPROBESTATS, 0600, "", "", PRIVATE,
                        BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,
                        LOAD_ON_USER, LOAD_ON_USERDEBUG);
