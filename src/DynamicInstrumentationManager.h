@@ -29,8 +29,8 @@ struct ExecutableMethodFileOffsets {
 };
 
 std::optional<ExecutableMethodFileOffsets>
-getExecutableMethodFileOffsets(int pid, int uid, std::string &processName,
-                               std::string &fqcn, std::string &methodName,
+getExecutableMethodFileOffsets(std::string &processName, std::string &fqcn,
+                               std::string &methodName,
                                std::vector<std::string> &fqParameters);
 
 } // namespace android::uprobestats::dynamic_instrumentation_manager
