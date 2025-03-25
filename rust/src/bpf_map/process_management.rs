@@ -3,6 +3,8 @@ use anyhow::{anyhow, Result};
 use log::debug;
 use protobuf::MessageField;
 use statssocket::AStatsEvent;
+use std::ffi::CStr;
+use zerocopy::IntoBytes;
 use uprobestats_bpf_bindgen::{
     SetUidTempAllowlistStateRecord, UpdateDeviceIdleTempAllowlistRecord,
 };
@@ -64,9 +66,8 @@ unsafe impl OnItem for UpdateDeviceIdleTempAllowlistRecord {
         event.write_int32(self.type_);
         event.write_int32(self.reason_code);
 
-        let reason = self.reason as [u8; 256];
-        let reason = std::str::from_utf8(&reason)?;
-        event.write_string(reason)?;
+        let reason = CStr::from_bytes_until_nul(self.reason.as_bytes())?;
+        event.write_string(reason.to_str()?)?;
 
         event.write_int32(self.calling_uid);
 
