@@ -127,7 +127,10 @@ uprobestats_cc_library {
 
 cc_binary {
     name: "uprobestats",
-    enabled: true,
+    enabled: select(release_flag("RELEASE_UPROBESTATS_RUST"), {
+        true: false,
+        false: true,
+    }),
     srcs: [
         "UprobeStats.cpp",
         "config.proto",
