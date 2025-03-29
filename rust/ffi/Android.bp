@@ -69,8 +69,29 @@ rust_library {
 rust_bindgen {
     name: "libstatssocket_bindgen",
     defaults: ["uprobestats_rust_defaults"],
-    wrapper_src: "statslog_wrapper.h",
+    wrapper_src: "statssocket_wrapper.h",
     crate_name: "statssocket_bindgen",
     source_stem: "bindings",
     shared_libs: ["libstatssocket"],
+}
+
+rust_library {
+    name: "libstatslog_uprobestats_rs",
+    defaults: ["uprobestats_rust_defaults"],
+    crate_name: "statslog_uprobestats",
+    srcs: [
+        "statslog_wrapper.rs",
+        ":statslog_uprobestats.rs",
+    ],
+    rustlibs: [
+        "libstatslog_rust_header",
+        "libstatspull_bindgen",
+    ],
+}
+
+genrule {
+    name: "statslog_uprobestats.rs",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --module uprobestats --rustHeaderCrate statslog_rust_header --rust $(genDir)/statslog_uprobestats.rs",
+    out: ["statslog_uprobestats.rs"],
 }

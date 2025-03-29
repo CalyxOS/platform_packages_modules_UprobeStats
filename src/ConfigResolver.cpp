@@ -95,18 +95,25 @@ resolveSingleTask(::uprobestats::protos::UprobestatsConfig config) {
     LOG(ERROR) << "task.target_process_name is required.";
     return {};
   }
-  ResolvedTask task;
-  task.taskConfig = taskConfig;
-  if (!process::getPidUid(taskConfig, &task.pid, &task.uid)) {
-    LOG(ERROR) << "getPidUid() failed";
+  if (taskConfig.target_process_name() != "system_server") {
+    LOG(ERROR)
+        << "system_server is the only target process currently supported";
     return {};
   }
+  auto process_name = taskConfig.target_process_name();
+  int pid = process::getPid(process_name);
+  if (pid < 0) {
+    LOG(ERROR) << "Unable to find pid of " << process_name;
+    return {};
+  }
+  ResolvedTask task;
+  task.taskConfig = taskConfig;
+  task.pid = pid;
   return task;
 }
 
 std::optional<std::vector<ResolvedProbe>>
-resolveProbes(::uprobestats::protos::UprobestatsConfig::Task &taskConfig,
-              int pid, int uid) {
+resolveProbes(::uprobestats::protos::UprobestatsConfig::Task &taskConfig) {
   if (taskConfig.probe_configs().size() == 0) {
     LOG(ERROR) << "task has no probe configs";
     return {};
@@ -126,7 +133,7 @@ resolveProbes(::uprobestats::protos::UprobestatsConfig::Task &taskConfig,
           dynamic_instrumentation_manager::ExecutableMethodFileOffsets>
           offsets =
               dynamic_instrumentation_manager::getExecutableMethodFileOffsets(
-                  pid, uid, processName, fqcn, methodName, fqParameters);
+                  processName, fqcn, methodName, fqParameters);
       if (!offsets.has_value()) {
         LOG(ERROR) << "Unable to find method offset for "
                    << probeConfig.fully_qualified_class_name() << "#"

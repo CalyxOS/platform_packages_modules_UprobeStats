@@ -23,6 +23,8 @@ rust_binary {
     srcs: ["main.rs"],
     defaults: ["uprobestats_rust_defaults"],
     rustlibs: [
+        "libzerocopy",
+        "libstatslog_uprobestats_rs",
         "libstatssocket_rs",
         "libuprobestats_rs",
         "libuprobestats_proto",

@@ -30,7 +30,6 @@
 #include <string>
 #include <thread>
 
-#include "BitmapInstrumentation.h"
 #include "Bpf.h"
 #include "ConfigResolver.h"
 #include "DebugLog.h"
@@ -55,6 +54,9 @@ bool isUprobestatsEnabled() {
   return android::uprobestats::flag_selector::enable_uprobestats();
 }
 
+const std::string kBpfPath = std::string("/sys/fs/bpf/uprobestats/");
+std::string prefixBpf(std::string value) { return kBpfPath + value.c_str(); }
+
 struct PollArgs {
   std::string mapPath;
   ::uprobestats::protos::UprobestatsConfig::Task taskConfig;
@@ -78,7 +80,8 @@ void doPoll(PollArgs args) {
             .count());
     if (mapPath.find(kGenericBpfMapDetail) != std::string::npos) {
       LOG_IF_DEBUG("polling for GenericDetail result");
-      auto result = bpf::pollRingBuf<bpf::CallResult>(mapPath, timeoutMs);
+      auto result =
+          bpf::pollRingBuf<bpf::CallResult>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         LOG_IF_DEBUG("GenericDetail result...");
         LOG_IF_DEBUG("register: pc = " << value.pc);
@@ -111,7 +114,8 @@ void doPoll(PollArgs args) {
       }
     } else if (mapPath.find(kGenericBpfMapTimestamp) != std::string::npos) {
       LOG_IF_DEBUG("polling for GenericTimestamp result");
-      auto result = bpf::pollRingBuf<bpf::CallTimestamp>(mapPath, timeoutMs);
+      auto result =
+          bpf::pollRingBuf<bpf::CallTimestamp>(mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         LOG_IF_DEBUG("GenericTimestamp result: event "
                      << value.event << " timestampNs: " << value.timestampNs);
@@ -138,7 +142,7 @@ void doPoll(PollArgs args) {
                std::string::npos) {
       LOG_IF_DEBUG("Polling for UpdateDeviceIdleTempAllowlistRecord result");
       auto result = bpf::pollRingBuf<bpf::UpdateDeviceIdleTempAllowlistRecord>(
-          mapPath, timeoutMs);
+          mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         LOG_IF_DEBUG("UpdateDeviceIdleTempAllowlistRecord result... "
                      << " changing_uid: " << value.changing_uid
@@ -166,7 +170,7 @@ void doPoll(PollArgs args) {
     } else if (mapPath.find(kProcessManagementMap) != std::string::npos) {
       LOG_IF_DEBUG("Polling for SetUidTempAllowlistStateRecord result");
       auto result = bpf::pollRingBuf<bpf::SetUidTempAllowlistStateRecord>(
-          mapPath, timeoutMs);
+          mapPath.c_str(), timeoutMs);
       for (auto value : result) {
         LOG_IF_DEBUG("SetUidTempAllowlistStateRecord result... uid: "
                      << value.uid << " onAllowlist: " << value.onAllowlist
@@ -206,8 +210,12 @@ void doPoll(PollArgs args) {
         }
       }
     } else {
-      LOG(ERROR) << "Unrecognized mapPath: " << mapPath;
-      return;
+      LOG_IF_DEBUG("Polling for i64 result");
+      auto result = bpf::pollRingBuf<uint64_t>(mapPath.c_str(), timeoutMs);
+      for (auto value : result) {
+        LOG_IF_DEBUG("Other result... value: " << value
+                                               << " mapPath: " << mapPath);
+      }
     }
     now = std::chrono::steady_clock::now();
   }
@@ -243,9 +251,8 @@ int main() {
   }
 
   LOG_IF_DEBUG("Found task config: " << resolvedTask.value());
-  auto resolvedProbeConfigs = config_resolver::resolveProbes(
-      resolvedTask.value().taskConfig, resolvedTask.value().pid,
-      resolvedTask.value().uid);
+  auto resolvedProbeConfigs =
+      config_resolver::resolveProbes(resolvedTask.value().taskConfig);
   if (!resolvedProbeConfigs.has_value()) {
     LOG(ERROR) << "Failed to resolve a probe config from task";
     return 1;
@@ -276,7 +283,8 @@ int main() {
     }
     auto openResult = bpf::bpfPerfEventOpen(
         resolvedProbe.filename.c_str(), resolvedProbe.offset,
-        resolvedTask.value().pid, resolvedProbe.probeConfig.bpf_name());
+        resolvedTask.value().pid,
+        prefixBpf(resolvedProbe.probeConfig.bpf_name()).c_str());
     if (openResult != 0) {
       LOG(ERROR) << "Failed to open bpf "
                  << resolvedProbe.probeConfig.bpf_name();
@@ -284,13 +292,6 @@ int main() {
     }
   }
 
-  if (android::uprobestats::mainline::flags::enable_bitmap_instrumentation() &&
-      bitmap_instrumentation::canHandleConfig(
-          resolvedTask.value().taskConfig)) {
-    bitmap_instrumentation::startReadBitmapBpfOutput(
-        resolvedTask.value().taskConfig);
-    return 0;
-  }
   std::vector<std::thread> threads;
   for (auto mapPath : resolvedTask.value().taskConfig.bpf_maps()) {
     if (mapPath ==
@@ -306,7 +307,8 @@ int main() {
           << "uprobestats_monitor_disruptive_app_activities disabled by flag";
       continue;
     }
-    auto pollArgs = PollArgs{mapPath, resolvedTask.value().taskConfig};
+    auto pollArgs =
+        PollArgs{prefixBpf(mapPath), resolvedTask.value().taskConfig};
     LOG_IF_DEBUG(
         "Starting thread to collect results from mapPath: " << mapPath);
     threads.emplace_back(doPoll, pollArgs);
