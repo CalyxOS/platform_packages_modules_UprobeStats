@@ -20,8 +20,7 @@ namespace android {
 namespace uprobestats {
 namespace process {
 
-bool getPidUid(const ::uprobestats::protos::UprobestatsConfig::Task &task,
-               int *pid, int *uid);
+int getPid(const std::string &processName);
 
 } // namespace process
 } // namespace uprobestats

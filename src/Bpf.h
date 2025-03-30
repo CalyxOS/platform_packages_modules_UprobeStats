@@ -21,7 +21,9 @@ namespace uprobestats {
 namespace bpf {
 
 int bpfPerfEventOpen(const char *filename, int offset, int pid,
-                     const std::string &bpfProgramPath);
+                     const char *bpfProgramPath);
+
+std::vector<int32_t> consumeRingBuf(const char *mapPath);
 
 // TODO: share this struct with bpf
 struct CallResult {
@@ -71,20 +73,10 @@ struct MalwareSignal {
 };
 #pragma pack(pop)
 
-struct ProcessChange {
-  int pid;
-  int uid;
-  char process_name[256];
-};
-
-struct BitmapCreation {
-  __u32 width;
-  __u32 height;
-  __u32 pixel_storage_type;
-};
-
 template <typename T>
-std::vector<T> pollRingBuf(const std::string &mapPath, int timeoutMs);
+std::vector<T> pollRingBuf(const char *mapPath, int timeoutMs);
+
+void printRingBuf(const char *mapPath);
 
 } // namespace bpf
 } // namespace uprobestats
