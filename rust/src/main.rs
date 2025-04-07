@@ -58,17 +58,23 @@ fn main_impl() -> Result<()> {
     let now = Instant::now();
     let duration = Duration::from_secs(duration_seconds);
 
-    let results = task.bpf_map_paths.into_iter().map(|map_path| {
-        debug!("Spawning thread for map_path: {}", map_path);
-        match thread::spawn({
+    let results: Vec<_> = task
+        .bpf_map_paths
+        .into_iter()
+        .map(|map_path| {
+            debug!("Spawning thread for map_path: {}", map_path);
             let task_proto = task.task.clone();
-            move || bpf_map::poll_and_loop(&map_path, now, duration, task_proto)
+            let map_path_clone = map_path.clone();
+            let thr =
+                thread::spawn(move || bpf_map::poll_and_loop(&map_path, now, duration, task_proto));
+            debug!("Spawned thread for map_path: {}", map_path_clone);
+            thr
         })
-        .join()
-        {
-            Ok(result) => result.map_err(|e| anyhow!("Thread error: {}", e)),
-            Err(panic) => bail!("Thread panic: {:?}", panic),
-        }
+        .collect();
+
+    let results = results.into_iter().map(|result| match result.join() {
+        Ok(result) => result.map_err(|e| anyhow!("Thread error: {}", e)),
+        Err(panic) => bail!("Thread panic: {:?}", panic),
     });
 
     let errors: Vec<_> = results

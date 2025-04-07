@@ -2,19 +2,21 @@ use anyhow::{bail, Result};
 use log::debug;
 use std::{
     collections::HashMap,
+    ffi::CStr,
     fmt::Debug,
     sync::LazyLock,
     time::{Duration, Instant},
 };
 use uprobestats_bpf::poll_ring_buf;
 use uprobestats_bpf_bindgen::{
-    CallResult, CallTimestamp, MalwareSignal, SetUidTempAllowlistStateRecord,
-    UpdateDeviceIdleTempAllowlistRecord,
+    BindServiceLocked, CallResult, CallTimestamp, ComponentEnabledSetting,
+    SetUidTempAllowlistStateRecord, UpdateDeviceIdleTempAllowlistRecord,
 };
 use uprobestats_proto::config::uprobestats_config::Task;
+use zerocopy::{Immutable, IntoBytes};
 
+mod disruptive_app;
 mod generic_instrumentation;
-mod malware_signal;
 mod process_management;
 
 pub(crate) fn poll_and_loop(
@@ -73,10 +75,60 @@ fn register<T: OnItem + Debug + Copy>(registry: &mut Registry) {
 
 static REGISTRY: LazyLock<Registry> = LazyLock::new(|| {
     let mut map = HashMap::new();
+    register::<BindServiceLocked>(&mut map);
     register::<CallTimestamp>(&mut map);
     register::<CallResult>(&mut map);
-    register::<MalwareSignal>(&mut map);
+    register::<ComponentEnabledSetting>(&mut map);
     register::<SetUidTempAllowlistStateRecord>(&mut map);
     register::<UpdateDeviceIdleTempAllowlistRecord>(&mut map);
     map
 });
+
+fn bytes_as_str(bytes: &(impl IntoBytes + Immutable)) -> Result<&str> {
+    let string = CStr::from_bytes_until_nul(bytes.as_bytes())?;
+    Ok(string.to_str()?)
+}
+
+#[cfg(test)]
+mod test {
+    // local test only util
+    fn print_xxd_like(prefix: &str, data: &(impl IntoBytes + Immutable)) {
+        let data = data.as_bytes();
+        let mut offset = 0;
+        debug!("{} hex:", prefix);
+        for chunk in data.chunks(16) {
+            // Format the offset
+            let offset_str = format!("{:08x}:", offset);
+            // Format the hexadecimal representation
+            let hex_str = chunk
+                .iter()
+                .enumerate()
+                .map(|(i, &byte)| {
+                    let hex = format!("{:02x}", byte);
+                    if (i + 1) % 2 == 0 && i != chunk.len() - 1 {
+                        format!("{} ", hex)
+                    } else {
+                        hex
+                    }
+                })
+                .collect::<Vec<String>>()
+                .join(" ");
+            let padded_hex_str = format!("{:<48}", hex_str); // Pad to align ASCII
+                                                             // Format the ASCII representation
+            let ascii_str = chunk
+                .iter()
+                .map(
+                    |&byte| {
+                        if byte.is_ascii_graphic() || byte == b' ' {
+                            byte as char
+                        } else {
+                            '.'
+                        }
+                    },
+                )
+                .collect::<String>();
+            debug!("{} {}  {}", offset_str, padded_hex_str, ascii_str);
+            offset += chunk.len();
+        }
+    }
+}
