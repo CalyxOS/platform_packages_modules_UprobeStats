@@ -60,7 +60,7 @@ unsafe impl OnItem for UpdateDeviceIdleTempAllowlistRecord {
 
         event.write_int32(self.changing_uid);
         event.write_bool(self.adding);
-        event.write_int64(self.duration_ms);
+        event.write_int64(self.duration_ms as _);
         event.write_int32(self.type_);
         event.write_int32(self.reason_code);
         event.write_string(bytes_as_str(&self.reason)?)?;

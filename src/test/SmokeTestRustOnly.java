@@ -18,6 +18,7 @@ package test;
 
 import static android.uprobestats.flags.Flags.FLAG_ENABLE_UPROBESTATS;
 import static android.uprobestats.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS;
+import static android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BITMAP_INSTRUMENTATION;
 import static android.uprobestats.mainline.flags.Flags.FLAG_UPROBESTATS_MONITOR_DISRUPTIVE_APP_ACTIVITIES;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -27,6 +28,7 @@ import static test.SmokeTestSetup.initializeStatsD;
 import static test.SmokeTestSetup.initializeUprobeStats;
 
 import android.cts.statsdatom.lib.AtomTestUtils;
+import android.cts.statsdatom.lib.DeviceUtils;
 import android.cts.statsdatom.lib.ReportUtils;
 import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.platform.test.flag.junit.CheckFlagsRule;
@@ -50,8 +52,9 @@ import org.junit.runner.RunWith;
 import java.util.List;
 
 @RunWith(DeviceJUnit4ClassRunner.class)
-public class SmokeTestDisruptiveApp extends BaseHostJUnit4Test {
+public class SmokeTestRustOnly extends BaseHostJUnit4Test {
     private static final String TEST_MALWARE_SIGNAL_CONFIG = "disruptive_app.textproto";
+    private static final String BITMAP_ALLOCATION_CONFIG = "bitmap.textproto";
     private ExtensionRegistry mRegistry;
 
     @Rule
@@ -120,5 +123,57 @@ public class SmokeTestDisruptiveApp extends BaseHostJUnit4Test {
         assertThat(balReported.getFlags())
                 .isEqualTo(1048576); // Context.BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS
         assertThat(balReported.getIntentPackageName()).isEqualTo("");
+    }
+
+    @Test
+    @RequiresFlagsEnabled({
+        FLAG_ENABLE_UPROBESTATS,
+        FLAG_EXECUTABLE_METHOD_FILE_OFFSETS,
+        com.android.art.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS_V2,
+        FLAG_ENABLE_BITMAP_INSTRUMENTATION,
+    })
+    public void bitmapAllocation() throws Exception {
+        // assumeTrue(CpuFeatures.isArm64(getDevice()));
+
+        configureStatsDAndStartUprobeStats(
+                getClass(),
+                getDevice(),
+                BITMAP_ALLOCATION_CONFIG,
+                UprobestatsExtensionAtoms.ANDROID_GRAPHICS_BITMAP_ALLOCATED_FIELD_NUMBER);
+
+        try (AutoCloseable a =
+                DeviceUtils.withActivity(
+                        getDevice(),
+                        "com.android.uprobestats.bitmap",
+                        "BitmapTestActivity",
+                        "action",
+                        "action.lmk")) {
+
+            // Allow UprobeStats/StatsD time to collect metric
+            RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
+
+            // See if the atom made it
+            List<StatsLog.EventMetricData> data =
+                    ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
+            assertThat(data.size()).isGreaterThan(0);
+            boolean anyMatch =
+                    data.stream()
+                            .map(StatsLog.EventMetricData::getAtom)
+                            .filter(
+                                    atom ->
+                                            atom.hasExtension(
+                                                    UprobestatsExtensionAtoms
+                                                            .androidGraphicsBitmapAllocated))
+                            .map(
+                                    atom ->
+                                            atom.getExtension(
+                                                    UprobestatsExtensionAtoms
+                                                            .androidGraphicsBitmapAllocated))
+                            .anyMatch(
+                                    reported ->
+                                            reported.getWidth() == 100
+                                                    && reported.getHeight() == 100);
+            assertThat(anyMatch).isTrue();
+        }
     }
 }

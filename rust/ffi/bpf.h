@@ -62,6 +62,18 @@ struct ComponentEnabledSetting {
   char calling_package_name[64];
 };
 
+struct ProcessChange {
+  int pid;
+  int uid;
+  char process_name[256];
+};
+
+struct BitmapAllocation {
+  __u32 width;
+  __u32 height;
+  __u32 pixel_storage_type;
+};
+
 int pollRingBuf(const char *mapPath, int timeoutMs, size_t valueSize,
                 void (*callback)(const void *, void *), void *cookie);
 int bpfPerfEventOpen(const char *filename, int offset, int pid,

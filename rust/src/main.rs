@@ -4,14 +4,9 @@ use binder::ProcessState;
 use log::{debug, error, LevelFilter};
 use rustutils::system_properties;
 use std::process::exit;
-use std::{
-    thread,
-    time::{Duration, Instant},
-};
+use std::{thread, time::Duration};
 use uprobestats_bpf::bpf_perf_event_open;
-use uprobestats_rs::{config_resolver, guardrail};
-
-mod bpf_map;
+use uprobestats_rs::{bpf_map, config_resolver, guardrail};
 
 fn main() {
     logger::init(
@@ -36,11 +31,12 @@ fn main_impl() -> Result<()> {
         guardrail::is_allowed(&config, is_user_build(), true)?,
         "uprobestats probing config disallowed on this device"
     );
-    let task = config_resolver::resolve_single_task(config)?;
 
     ProcessState::start_thread_pool();
 
-    let probes = config_resolver::resolve_probes(&task.task)?;
+    let task = config_resolver::resolve_single_task(config)?;
+
+    let probes = config_resolver::resolve_probes(&task)?;
     for probe in probes {
         bpf_perf_event_open(
             probe.filename.clone(),
@@ -54,10 +50,7 @@ fn main_impl() -> Result<()> {
         );
     }
 
-    let duration_seconds: u64 = task.duration_seconds.try_into()?;
-    let now = Instant::now();
-    let duration = Duration::from_secs(duration_seconds);
-
+    let duration = Duration::from_secs(task.duration_seconds.try_into()?);
     let results: Vec<_> = task
         .bpf_map_paths
         .into_iter()
@@ -66,7 +59,7 @@ fn main_impl() -> Result<()> {
             let task_proto = task.task.clone();
             let map_path_clone = map_path.clone();
             let thr =
-                thread::spawn(move || bpf_map::poll_and_loop(&map_path, now, duration, task_proto));
+                thread::spawn(move || bpf_map::poll_registry(&map_path, task_proto, duration));
             debug!("Spawned thread for map_path: {}", map_path_clone);
             thr
         })

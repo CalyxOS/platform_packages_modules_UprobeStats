@@ -4,6 +4,7 @@ use log::debug;
 use statslog_uprobestats::{
     bind_service_locked_with_bal_flags_reported, set_component_enabled_setting_reported,
 };
+use std::ffi::c_long;
 use uprobestats_bpf_bindgen::{BindServiceLocked, ComponentEnabledSetting};
 use uprobestats_proto::config::uprobestats_config::Task;
 
@@ -34,7 +35,7 @@ unsafe impl OnItem for ComponentEnabledSetting {
     }
 }
 
-const BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS: i64 = 0x00100000; // Context.BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS
+const BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS: c_long = 0x00100000; // Context.BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS
 
 // SAFETY: `BindServiceLocked` is a struct defined in the given `MAP_PATH`, and is guaranteed to match the
 // layout of the corresponding C struct.
@@ -56,7 +57,7 @@ unsafe impl OnItem for BindServiceLocked {
         if has_bal_flag {
             bind_service_locked_with_bal_flags_reported::stats_write(
                 intent_package,
-                flags,
+                flags as _,
                 calling_package,
             )?;
         }
