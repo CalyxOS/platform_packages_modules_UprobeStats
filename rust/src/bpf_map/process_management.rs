@@ -1,10 +1,8 @@
-use super::OnItem;
+use super::{bytes_as_str, OnItem};
 use anyhow::{anyhow, Result};
 use log::debug;
 use protobuf::MessageField;
 use statssocket::AStatsEvent;
-use std::ffi::CStr;
-use zerocopy::IntoBytes;
 use uprobestats_bpf_bindgen::{
     SetUidTempAllowlistStateRecord, UpdateDeviceIdleTempAllowlistRecord,
 };
@@ -62,13 +60,10 @@ unsafe impl OnItem for UpdateDeviceIdleTempAllowlistRecord {
 
         event.write_int32(self.changing_uid);
         event.write_bool(self.adding);
-        event.write_int64(self.duration_ms);
+        event.write_int64(self.duration_ms as _);
         event.write_int32(self.type_);
         event.write_int32(self.reason_code);
-
-        let reason = CStr::from_bytes_until_nul(self.reason.as_bytes())?;
-        event.write_string(reason.to_str()?)?;
-
+        event.write_string(bytes_as_str(&self.reason)?)?;
         event.write_int32(self.calling_uid);
 
         event.write();

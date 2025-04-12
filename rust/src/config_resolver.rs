@@ -1,4 +1,5 @@
 //! Validates uprobestats config protos and adds additional info.
+use crate::prefix_bpf;
 use anyhow::{anyhow, Result};
 use dynamic_instrumentation_manager::{
     ExecutableMethodFileOffsets, MethodDescriptor, TargetProcess,
@@ -8,11 +9,16 @@ use protobuf::Message;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
+use std::time::Duration;
 use uprobestats_proto::config::{
-    uprobestats_config::task::ProbeConfig, uprobestats_config::Task, UprobestatsConfig,
+    uprobestats_config::{
+        task::{ProbeConfig, TargetProcessSelection},
+        Task,
+    },
+    UprobestatsConfig,
 };
 
-use crate::{art::get_method_offset_from_oatdump, process::get_pid};
+use crate::{art::get_method_offset_from_oatdump, process::get_pid_and_uid};
 
 /// Validated probe proto + probe target's code filename and offset.
 pub struct ResolvedProbe {
@@ -33,6 +39,8 @@ pub struct ResolvedTask {
     pub duration_seconds: i32,
     /// The pid of the task's target process.
     pub pid: i32,
+    /// The uid of the task's target process.
+    pub uid: i32,
     /// The set of absolute bpf map paths used by the task.
     pub bpf_map_paths: HashSet<String>,
 }
@@ -52,21 +60,26 @@ pub fn resolve_single_task(config: UprobestatsConfig) -> Result<ResolvedTask> {
         .target_process_name
         .clone()
         .ok_or_else(|| anyhow!("Target process name is required"))?;
-    if target_process_name != "system_server" {
-        return Err(anyhow!("system_server is the only target process currently supported"));
-    }
 
-    let pid = get_pid(&target_process_name)
-        .ok_or_else(|| anyhow!("Failed to get pid for process: {target_process_name}"))?;
+    let target_process_selection = task
+        .target_process_selection
+        .unwrap_or(TargetProcessSelection::UNKNOWN.into())
+        .enum_value_or_default();
+
+    let (pid, uid) = get_pid_and_uid(
+        &target_process_name,
+        target_process_selection,
+        Duration::from_secs(duration_seconds.try_into()?),
+    )?;
 
     let bpf_map_paths = task.bpf_maps.iter().map(|bpf_map| prefix_bpf(bpf_map)).collect();
 
-    Ok(ResolvedTask { duration_seconds, task, pid, bpf_map_paths })
+    Ok(ResolvedTask { duration_seconds, task, pid, uid, bpf_map_paths })
 }
 
 /// Validates a single probe proto and adds additional info.
-pub fn resolve_probes(task: &Task) -> Result<Vec<ResolvedProbe>> {
-    let resolved_probes = task.probe_configs.clone().into_iter().map(|probe| {
+pub fn resolve_probes(resolved_task: &ResolvedTask) -> Result<Vec<ResolvedProbe>> {
+    let resolved_probes = resolved_task.task.probe_configs.clone().into_iter().map(|probe| {
         let bpf_name = probe.bpf_name.as_ref().ok_or_else(|| anyhow!("bpf_name is required"))?;
         let bpf_program_path = prefix_bpf(bpf_name);
         if let Some(ref fully_qualified_class_name) = probe.fully_qualified_class_name {
@@ -75,7 +88,12 @@ pub fn resolve_probes(task: &Task) -> Result<Vec<ResolvedProbe>> {
                 probe.method_name.clone().ok_or_else(|| anyhow!("method_name is required"))?;
             let fully_qualified_parameters = probe.fully_qualified_parameters.clone();
             let offsets = ExecutableMethodFileOffsets::get(
-                &TargetProcess::system_server()?,
+                &TargetProcess::new(
+                    resolved_task.uid.try_into()?,
+                    resolved_task.pid,
+                    // target_process_name is validated at this point, put it on resolved version?
+                    &resolved_task.task.target_process_name.clone().unwrap(),
+                )?,
                 &MethodDescriptor::new(
                     &fully_qualified_class_name.clone(),
                     &method_name,
@@ -136,9 +154,4 @@ pub fn read_config(config_path: &str) -> Result<UprobestatsConfig> {
     file.read_to_end(&mut buffer).map_err(|e| anyhow!("Failed to read config file: {e}"))?;
     UprobestatsConfig::parse_from_bytes(&buffer)
         .map_err(|e| anyhow!("Failed to parse config file: {e}"))
-}
-
-const BPF_DIR: &str = "/sys/fs/bpf/uprobestats/";
-fn prefix_bpf(path: &str) -> String {
-    BPF_DIR.to_string() + path
 }

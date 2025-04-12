@@ -55,6 +55,7 @@ java_aconfig_library {
     host_supported: true,
     visibility: [
         "//cts/hostsidetests/statsdatom:__subpackages__",
+        "//packages/modules/UprobeStats:__subpackages__",
     ],
 }
 
@@ -158,7 +159,6 @@ cc_binary {
             "BitmapAllocation.o",
             "GenericInstrumentation.o",
             "ProcessManagement.o",
-            "MalwareSignal.o",
         ],
     }),
 
