@@ -24,7 +24,15 @@ fn main() {
 fn main_impl() -> Result<()> {
     debug!("started");
 
-    ensure!(is_uprobestats_enabled(), "Uprobestats disabled by flag");
+    ensure!(uprobestats_mainline_flags_rust::enable_uprobestats(), "enable_uprobestats disabled");
+    ensure!(
+        uprobestats_mainline_flags_rust::uprobestats_support_update_device_idle_temp_allowlist(),
+        "uprobestats_support_update_device_idle_temp_allowlist disabled",
+    );
+    ensure!(
+        uprobestats_mainline_flags_rust::executable_method_file_offsets(),
+        "executable_method_file_offsets disabled",
+    );
 
     let config = config_resolver::read_config("/data/misc/uprobestats-configs/config")?;
     ensure!(
@@ -93,8 +101,4 @@ fn is_user_build() -> bool {
         return val == "user";
     }
     true
-}
-
-fn is_uprobestats_enabled() -> bool {
-    uprobestats_mainline_flags_rust::enable_uprobestats()
 }

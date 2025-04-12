@@ -1,6 +1,6 @@
 //! Validates uprobestats config protos and adds additional info.
 use crate::prefix_bpf;
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, ensure, Result};
 use dynamic_instrumentation_manager::{
     ExecutableMethodFileOffsets, MethodDescriptor, TargetProcess,
 };
@@ -37,6 +37,8 @@ pub struct ResolvedTask {
     pub task: Task,
     /// The duration of the task in seconds.
     pub duration_seconds: i32,
+    /// Name of the task's target process,
+    pub process_name: String,
     /// The pid of the task's target process.
     pub pid: i32,
     /// The uid of the task's target process.
@@ -50,13 +52,24 @@ pub fn resolve_single_task(config: UprobestatsConfig) -> Result<ResolvedTask> {
     let mut tasks = config.tasks.into_iter();
     let task = tasks.next().ok_or_else(|| anyhow!("No tasks found in config"))?;
 
+    let bpf_map_paths: Result<HashSet<String>> = task
+        .bpf_maps
+        .iter()
+        .map(|bpf_map| {
+            ensure!(is_bpf_file_enabled(bpf_map), "{} is disabled by flag", bpf_map);
+            Ok(prefix_bpf(bpf_map))
+        })
+        .collect();
+
+    let bpf_map_paths = bpf_map_paths?;
+
     let duration_seconds =
         task.duration_seconds.ok_or_else(|| anyhow!("Task duration is required"))?;
     if duration_seconds <= 0 {
         return Err(anyhow!("Task duration must be greater than 0"));
     }
 
-    let target_process_name = task
+    let process_name = task
         .target_process_name
         .clone()
         .ok_or_else(|| anyhow!("Target process name is required"))?;
@@ -67,20 +80,19 @@ pub fn resolve_single_task(config: UprobestatsConfig) -> Result<ResolvedTask> {
         .enum_value_or_default();
 
     let (pid, uid) = get_pid_and_uid(
-        &target_process_name,
+        &process_name,
         target_process_selection,
         Duration::from_secs(duration_seconds.try_into()?),
     )?;
 
-    let bpf_map_paths = task.bpf_maps.iter().map(|bpf_map| prefix_bpf(bpf_map)).collect();
-
-    Ok(ResolvedTask { duration_seconds, task, pid, uid, bpf_map_paths })
+    Ok(ResolvedTask { duration_seconds, task, process_name, pid, uid, bpf_map_paths })
 }
 
 /// Validates a single probe proto and adds additional info.
 pub fn resolve_probes(resolved_task: &ResolvedTask) -> Result<Vec<ResolvedProbe>> {
     let resolved_probes = resolved_task.task.probe_configs.clone().into_iter().map(|probe| {
         let bpf_name = probe.bpf_name.as_ref().ok_or_else(|| anyhow!("bpf_name is required"))?;
+        ensure!(is_bpf_file_enabled(bpf_name), "{} is disabled by flag", bpf_name);
         let bpf_program_path = prefix_bpf(bpf_name);
         if let Some(ref fully_qualified_class_name) = probe.fully_qualified_class_name {
             debug!("using getExecutableMethodFileOffsets to retrieve offsets");
@@ -91,8 +103,7 @@ pub fn resolve_probes(resolved_task: &ResolvedTask) -> Result<Vec<ResolvedProbe>
                 &TargetProcess::new(
                     resolved_task.uid.try_into()?,
                     resolved_task.pid,
-                    // target_process_name is validated at this point, put it on resolved version?
-                    &resolved_task.task.target_process_name.clone().unwrap(),
+                    &resolved_task.process_name,
                 )?,
                 &MethodDescriptor::new(
                     &fully_qualified_class_name.clone(),
@@ -154,4 +165,14 @@ pub fn read_config(config_path: &str) -> Result<UprobestatsConfig> {
     file.read_to_end(&mut buffer).map_err(|e| anyhow!("Failed to read config file: {e}"))?;
     UprobestatsConfig::parse_from_bytes(&buffer)
         .map_err(|e| anyhow!("Failed to parse config file: {e}"))
+}
+
+fn is_bpf_file_enabled(bpf_prog_or_map_name: &str) -> bool {
+    if bpf_prog_or_map_name.contains("DisruptiveApp") {
+        uprobestats_mainline_flags_rust::uprobestats_monitor_disruptive_app_activities()
+    } else if bpf_prog_or_map_name.contains("BitmapAllocation") {
+        uprobestats_mainline_flags_rust::enable_bitmap_instrumentation()
+    } else {
+        true
+    }
 }
