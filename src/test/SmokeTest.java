@@ -62,6 +62,8 @@ public class SmokeTest extends BaseHostJUnit4Test {
             "test_bss_setBatteryState_artApi.textproto";
     private static final String TEMP_ALLOWLIST_CONFIG =
             "test_updateDeviceIdleTempAllowlist.textproto";
+    private static final String SET_TEMP_ALLOWLIST_STATE_CONFIG =
+            "test_setUidTempAllowlistStateLSP.textproto";
     private static final String CONFIG_NAME = "config";
     private static final String CMD_SETPROP_UPROBESTATS = "setprop ctl.start uprobestats";
     private static final String CONFIG_DIR = "/data/misc/uprobestats-configs/";
@@ -168,6 +170,43 @@ public class SmokeTest extends BaseHostJUnit4Test {
                                                 FrameworkExtensionAtoms
                                                         .deviceIdleTempAllowlistUpdated))
                         .anyMatch(reported -> reported.getReason().equals("shell"));
+        assertThat(anyMatch).isTrue();
+    }
+
+    @Test
+    @RequiresFlagsEnabled(FLAG_ENABLE_UPROBESTATS)
+    public void setUidTempAllowlistState() throws Exception {
+        assumeTrue(CpuFeatures.isArm64(getDevice()));
+        configureStatsDAndStartUprobeStats(
+                getClass(),
+                getDevice(),
+                SET_TEMP_ALLOWLIST_STATE_CONFIG,
+                FrameworkExtensionAtoms.POWER_SAVE_TEMP_ALLOWLIST_CHANGED_FIELD_NUMBER);
+
+        // Set tempallowlist
+        getDevice().executeShellCommand("cmd deviceidle tempwhitelist com.google.android.tts");
+        // Allow UprobeStats/StatsD time to collect metric
+        RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
+
+        // See if the atom made it
+        List<StatsLog.EventMetricData> data =
+                ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
+        assertThat(data.size()).isGreaterThan(0);
+        boolean anyMatch =
+                data.stream()
+                        .map(StatsLog.EventMetricData::getAtom)
+                        .filter(
+                                atom ->
+                                        atom.hasExtension(
+                                                FrameworkExtensionAtoms
+                                                        .powerSaveTempAllowlistChanged))
+                        .map(
+                                atom ->
+                                        atom.getExtension(
+                                                FrameworkExtensionAtoms
+                                                        .powerSaveTempAllowlistChanged))
+                        .anyMatch(
+                                reported -> reported.getUid() > 0 && reported.getAddToAllowlist());
         assertThat(anyMatch).isTrue();
     }
 }
