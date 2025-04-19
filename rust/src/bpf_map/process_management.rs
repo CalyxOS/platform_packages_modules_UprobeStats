@@ -11,8 +11,7 @@ use uprobestats_proto::config::uprobestats_config::Task;
 // SAFETY: `SetUidTempAllowlistStateRecord` is a struct defined in the given `MAP_PATH`, and is guaranteed to match the
 // layout of the corresponding C struct.
 unsafe impl OnItem for SetUidTempAllowlistStateRecord {
-    const MAP_PATH: &'static str =
-        "/sys/fs/bpf/uprobestats/map_ProcessManagement_update_device_idle_temp_allowlist_records";
+    const MAP_PATH: &'static str = "/sys/fs/bpf/uprobestats/map_ProcessManagement_output_buf";
     fn on_item(&self, task: &Task) -> Result<()> {
         debug!("SetUidTempAllowlistStateRecord: {:?}", self);
 

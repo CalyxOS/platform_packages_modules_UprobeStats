@@ -1,19 +1,23 @@
 //! UProbestats executable.
 use anyhow::{anyhow, bail, ensure, Result};
 use binder::ProcessState;
-use log::{debug, error, LevelFilter};
+use log::{debug, error, Level, LevelFilter};
 use rustutils::system_properties;
-use std::process::exit;
-use std::{thread, time::Duration};
+use std::{cmp::min, process::exit, str::FromStr, thread, time::Duration};
 use uprobestats_bpf::bpf_perf_event_open;
 use uprobestats_rs::{bpf_map, config_resolver, guardrail};
 
 fn main() {
-    logger::init(
-        logger::Config::default()
-            .with_tag_on_device("uprobestats")
-            .with_max_level(if is_user_build() { LevelFilter::Info } else { LevelFilter::Trace }),
-    );
+    let log_level_prop: String = system_properties::read("log.tag.uprobestats")
+        .ok()
+        .flatten()
+        .unwrap_or(Level::Info.to_string());
+    let log_level_filter =
+        Level::from_str(&log_level_prop).unwrap_or(Level::Info).to_level_filter();
+
+    logger::init(logger::Config::default().with_tag_on_device("uprobestats").with_max_level(
+        if is_user_build() { min(LevelFilter::Info, log_level_filter) } else { log_level_filter },
+    ));
 
     if let Err(e) = main_impl() {
         error!("{}", e);
@@ -24,7 +28,15 @@ fn main() {
 fn main_impl() -> Result<()> {
     debug!("started");
 
-    ensure!(is_uprobestats_enabled(), "Uprobestats disabled by flag");
+    ensure!(uprobestats_mainline_flags_rust::enable_uprobestats(), "enable_uprobestats disabled");
+    ensure!(
+        uprobestats_mainline_flags_rust::uprobestats_support_update_device_idle_temp_allowlist(),
+        "uprobestats_support_update_device_idle_temp_allowlist disabled",
+    );
+    ensure!(
+        uprobestats_mainline_flags_rust::executable_method_file_offsets(),
+        "executable_method_file_offsets disabled",
+    );
 
     let config = config_resolver::read_config("/data/misc/uprobestats-configs/config")?;
     ensure!(
@@ -93,8 +105,4 @@ fn is_user_build() -> bool {
         return val == "user";
     }
     true
-}
-
-fn is_uprobestats_enabled() -> bool {
-    uprobestats_mainline_flags_rust::enable_uprobestats()
 }
