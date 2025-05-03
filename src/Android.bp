@@ -40,12 +40,14 @@ cc_aconfig_library {
 java_aconfig_library {
     name: "uprobestats_flags_java_lib",
     aconfig_declarations: "uprobestats_flags",
+    sdk_version: "current",
     host_supported: true,
 }
 
 java_aconfig_library {
     name: "art_flags_uprobestats_java_lib",
     aconfig_declarations: "art-aconfig-flags",
+    sdk_version: "current",
     host_supported: true,
 }
 

@@ -23,6 +23,8 @@ import static android.uprobestats.mainline.flags.Flags.FLAG_UPROBESTATS_MONITOR_
 
 import static com.google.common.truth.Truth.assertThat;
 
+import static org.junit.Assume.assumeTrue;
+
 import static test.SmokeTestSetup.configureStatsDAndStartUprobeStats;
 import static test.SmokeTestSetup.initializeStatsD;
 import static test.SmokeTestSetup.initializeUprobeStats;
@@ -34,6 +36,7 @@ import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.platform.test.flag.junit.CheckFlagsRule;
 import android.platform.test.flag.junit.host.HostFlagsValueProvider;
 
+import com.android.compatibility.common.util.CpuFeatures;
 import com.android.os.StatsLog;
 import com.android.os.uprobestats.BindServiceLockedWithBalFlagsReported;
 import com.android.os.uprobestats.SetComponentEnabledSettingReported;
@@ -74,6 +77,8 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
         FLAG_UPROBESTATS_MONITOR_DISRUPTIVE_APP_ACTIVITIES,
     })
     public void disruptiveAppActivity() throws Exception {
+        assumeTrue(CpuFeatures.isArm64(getDevice()));
+
         configureStatsDAndStartUprobeStats(
                 getClass(),
                 getDevice(),
@@ -133,7 +138,7 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
         FLAG_ENABLE_BITMAP_INSTRUMENTATION,
     })
     public void bitmapAllocation() throws Exception {
-        // assumeTrue(CpuFeatures.isArm64(getDevice()));
+        assumeTrue(CpuFeatures.isArm64(getDevice()));
 
         configureStatsDAndStartUprobeStats(
                 getClass(),

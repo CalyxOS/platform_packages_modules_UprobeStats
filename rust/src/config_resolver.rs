@@ -4,7 +4,7 @@ use anyhow::{anyhow, ensure, Result};
 use dynamic_instrumentation_manager::{
     ExecutableMethodFileOffsets, MethodDescriptor, TargetProcess,
 };
-use log::debug;
+use log::{debug, warn};
 use protobuf::Message;
 use std::collections::HashSet;
 use std::fs::File;
@@ -131,10 +131,14 @@ pub fn resolve_probes(resolved_task: &ResolvedTask) -> Result<Vec<ResolvedProbe>
             let mut offset: i32 = 0;
             let mut found_file_path: String = "".to_string();
             for file_path in &probe.file_paths {
-                let found_offset = get_method_offset_from_oatdump(file_path, &method_signature)?;
-                let Some(found_offset) = found_offset else {
-                    continue;
-                };
+                let found_offset = get_method_offset_from_oatdump(file_path, &method_signature)
+                    .inspect_err(|e| {
+                        warn!("Failed to get offset for {method_signature} from {file_path}: {e}")
+                    })
+                    .ok()
+                    .flatten()
+                    .unwrap_or(0);
+
                 if found_offset > 0 {
                     found_file_path = file_path.to_string();
                     offset = found_offset;
