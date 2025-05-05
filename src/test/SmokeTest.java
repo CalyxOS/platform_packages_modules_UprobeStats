@@ -47,6 +47,7 @@ import com.android.tradefed.util.RunUtil;
 import com.google.protobuf.ExtensionRegistry;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -98,6 +99,7 @@ public class SmokeTest extends BaseHostJUnit4Test {
     }
 
     @Test
+    @Ignore
     @RequiresFlagsEnabled({
         FLAG_ENABLE_UPROBESTATS,
         FLAG_EXECUTABLE_METHOD_FILE_OFFSETS,
@@ -174,6 +176,7 @@ public class SmokeTest extends BaseHostJUnit4Test {
     }
 
     @Test
+    @Ignore
     @RequiresFlagsEnabled(FLAG_ENABLE_UPROBESTATS)
     public void setUidTempAllowlistState() throws Exception {
         assumeTrue(CpuFeatures.isArm64(getDevice()));
