@@ -30,6 +30,7 @@ rust_binary {
     }),
     srcs: ["main.rs"],
     defaults: ["uprobestats_rust_defaults"],
+    prefer_rlib: true,
     rustlibs: [
         "libuprobestats_rs",
         "libuprobestats_proto",
