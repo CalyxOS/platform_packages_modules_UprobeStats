@@ -58,6 +58,7 @@ import java.util.List;
 public class SmokeTestRustOnly extends BaseHostJUnit4Test {
     private static final String TEST_MALWARE_SIGNAL_CONFIG = "disruptive_app.textproto";
     private static final String BITMAP_ALLOCATION_CONFIG = "bitmap.textproto";
+    private static final String BITMAP_TESTAPP_PACKAGE_NAME = "com.android.uprobestats.bitmap";
     private ExtensionRegistry mRegistry;
 
     @Rule
@@ -139,6 +140,7 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
     })
     public void bitmapAllocation() throws Exception {
         assumeTrue(CpuFeatures.isArm64(getDevice()));
+        final int uid = DeviceUtils.getAppUid(getDevice(), BITMAP_TESTAPP_PACKAGE_NAME);
 
         configureStatsDAndStartUprobeStats(
                 getClass(),
@@ -149,7 +151,7 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
         try (AutoCloseable a =
                 DeviceUtils.withActivity(
                         getDevice(),
-                        "com.android.uprobestats.bitmap",
+                        BITMAP_TESTAPP_PACKAGE_NAME,
                         "BitmapTestActivity",
                         "action",
                         "action.lmk")) {
@@ -177,7 +179,8 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
                             .anyMatch(
                                     reported ->
                                             reported.getWidth() == 100
-                                                    && reported.getHeight() == 100);
+                                                    && reported.getHeight() == 100
+                                                    && reported.getUid() == uid);
             assertThat(anyMatch).isTrue();
         }
     }

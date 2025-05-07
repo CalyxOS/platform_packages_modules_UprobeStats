@@ -52,7 +52,7 @@ fn main_impl() -> Result<()> {
     let task = config_resolver::resolve_single_task(config)?;
 
     let probes = config_resolver::resolve_probes(&task)?;
-    for probe in probes {
+    for probe in &probes {
         debug!(
             "attaching bpf {} to {} at {}",
             probe.bpf_program_path, &probe.filename, &probe.offset
@@ -72,13 +72,14 @@ fn main_impl() -> Result<()> {
     let duration = Duration::from_secs(task.duration_seconds.try_into()?);
     let results: Vec<_> = task
         .bpf_map_paths
+        .clone()
         .into_iter()
         .map(|map_path| {
             debug!("Spawning thread for map_path: {}", map_path);
-            let task_proto = task.task.clone();
             let map_path_clone = map_path.clone();
+            let task_clone = task.clone();
             let thr =
-                thread::spawn(move || bpf_map::poll_registry(&map_path, task_proto, duration));
+                thread::spawn(move || bpf_map::poll_registry(&map_path, &task_clone, duration));
             debug!("Spawned thread for map_path: {}", map_path_clone);
             thr
         })

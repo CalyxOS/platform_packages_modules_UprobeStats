@@ -6,6 +6,7 @@ use dynamic_instrumentation_manager::{
 };
 use log::{debug, warn};
 use protobuf::Message;
+use std::clone::Clone;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
@@ -32,6 +33,7 @@ pub struct ResolvedProbe {
 }
 
 /// Validated task proto + probe target's pid.
+#[derive(Clone)]
 pub struct ResolvedTask {
     /// The task proto.
     pub task: Task,

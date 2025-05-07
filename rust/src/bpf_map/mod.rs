@@ -1,4 +1,5 @@
 //! Deals with fetching data BPF ring buffers ("maps").
+use crate::config_resolver::ResolvedTask;
 use crate::Timer;
 use anyhow::{bail, Result};
 use log::debug;
@@ -8,7 +9,6 @@ use uprobestats_bpf_bindgen::{
     BindServiceLocked, BitmapAllocation, CallResult, CallTimestamp, ComponentEnabledSetting,
     SetUidTempAllowlistStateRecord, UpdateDeviceIdleTempAllowlistRecord,
 };
-use uprobestats_proto::config::uprobestats_config::Task;
 use zerocopy::{Immutable, IntoBytes};
 
 mod bitmap_allocation;
@@ -17,7 +17,7 @@ mod generic_instrumentation;
 mod process_management;
 
 /// Polls the given map_path based on the existing registry of handlers.
-pub fn poll_registry(map_path: &str, task: Task, duration: Duration) -> Result<()> {
+pub fn poll_registry(map_path: &str, task: &ResolvedTask, duration: Duration) -> Result<()> {
     let timer = Timer::new(duration);
     while let Some(remaining_millis) = timer.remaining_millis() {
         let remaining_millis: i32 = remaining_millis.try_into()?;
@@ -25,12 +25,16 @@ pub fn poll_registry(map_path: &str, task: Task, duration: Duration) -> Result<(
         let Some(do_poll) = REGISTRY.get(map_path) else {
             bail!("unsupported map_path: {}", map_path);
         };
-        do_poll(map_path, &task, remaining_millis)?;
+        do_poll(map_path, task, remaining_millis)?;
     }
     Ok(())
 }
 
-fn poll<T: OnItem + Debug + Copy>(map_path: &str, task: &Task, timeout_millis: i32) -> Result<()> {
+fn poll<T: OnItem + Debug + Copy>(
+    map_path: &str,
+    task: &ResolvedTask,
+    timeout_millis: i32,
+) -> Result<()> {
     if map_path != T::MAP_PATH {
         bail!("map_path mismatch: {} != {}", map_path, T::MAP_PATH)
     }
@@ -54,10 +58,10 @@ const JAVA_ARGUMENT_REGISTER_OFFSET: i32 = 2;
 /// which holds items of type `T` implementing this trait.
 unsafe trait OnItem {
     const MAP_PATH: &'static str;
-    fn on_item(&self, task: &Task) -> Result<()>;
+    fn on_item(&self, task: &ResolvedTask) -> Result<()>;
 }
 
-type Registry = HashMap<&'static str, fn(&str, &Task, i32) -> Result<()>>;
+type Registry = HashMap<&'static str, fn(&str, &ResolvedTask, i32) -> Result<()>>;
 
 fn register<T: OnItem + Debug + Copy>(registry: &mut Registry) {
     registry.insert(T::MAP_PATH, poll::<T> as _);

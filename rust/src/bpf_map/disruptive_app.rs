@@ -1,4 +1,5 @@
 use super::{bytes_as_str, OnItem};
+use crate::config_resolver::ResolvedTask;
 use anyhow::Result;
 use log::debug;
 use statslog_uprobestats::{
@@ -6,7 +7,6 @@ use statslog_uprobestats::{
 };
 use std::ffi::c_long;
 use uprobestats_bpf_bindgen::{BindServiceLocked, ComponentEnabledSetting};
-use uprobestats_proto::config::uprobestats_config::Task;
 
 const COMPONENT_ENABLED_STATE_DISABLED: i32 = 2; // PackageManager#COMPONENT_ENABLED_STATE_DISABLED (all values greater than or equal to are disabled states)
 
@@ -15,7 +15,7 @@ const COMPONENT_ENABLED_STATE_DISABLED: i32 = 2; // PackageManager#COMPONENT_ENA
 unsafe impl OnItem for ComponentEnabledSetting {
     const MAP_PATH: &'static str =
         "/sys/fs/bpf/uprobestats/map_DisruptiveApp_ComponentEnabledSetting_output_buf";
-    fn on_item(&self, _task: &Task) -> Result<()> {
+    fn on_item(&self, _task: &ResolvedTask) -> Result<()> {
         let package_name = bytes_as_str(&self.package_name)?;
         let class_name = bytes_as_str(&self.class_name)?;
         let new_state = self.new_state;
@@ -42,7 +42,7 @@ const BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS: c_long = 0x00100000; // Context.BIN
 unsafe impl OnItem for BindServiceLocked {
     const MAP_PATH: &'static str =
         "/sys/fs/bpf/uprobestats/map_DisruptiveApp_BindServiceLocked_output_buf";
-    fn on_item(&self, _task: &Task) -> Result<()> {
+    fn on_item(&self, _task: &ResolvedTask) -> Result<()> {
         let intent_package = bytes_as_str(&self.intent_package)?;
         let intent_action = bytes_as_str(&self.intent_action)?;
         let intent_component_name_package = bytes_as_str(&self.intent_component_name_package)?;
