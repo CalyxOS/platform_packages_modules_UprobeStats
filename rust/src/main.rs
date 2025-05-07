@@ -70,37 +70,27 @@ fn main_impl() -> Result<()> {
     }
 
     let duration = Duration::from_secs(task.duration_seconds.try_into()?);
-    let results: Vec<_> = task
-        .bpf_map_paths
-        .clone()
-        .into_iter()
-        .map(|map_path| {
-            debug!("Spawning thread for map_path: {}", map_path);
-            let map_path_clone = map_path.clone();
-            let task_clone = task.clone();
-            let thr =
-                thread::spawn(move || bpf_map::poll_registry(&map_path, &task_clone, duration));
-            debug!("Spawned thread for map_path: {}", map_path_clone);
-            thr
-        })
-        .collect();
+    let errors = thread::scope(|s| {
+        let mut handles = vec![];
+        for map_path in &task.bpf_map_paths {
+            let task_ref = &task;
+            handles.push(s.spawn(move || {
+                debug!("Spawned thread for map_path: {}", map_path);
+                bpf_map::poll_registry(map_path, task_ref, duration)
+                    .map_err(|e| anyhow!("poll_registry error: {}", e))
+            }));
+        }
 
-    let results = results.into_iter().map(|result| match result.join() {
-        Ok(result) => result.map_err(|e| anyhow!("Thread error: {}", e)),
-        Err(panic) => bail!("Thread panic: {:?}", panic),
+        handles
+            .into_iter()
+            .map(|handle| handle.join().map_err(|p| anyhow!("Thread panic: {p:?}")).and_then(|r| r))
+            .filter_map(|r| r.err())
+            .collect::<Vec<_>>()
     });
-
-    let errors: Vec<_> = results
-        .filter_map(|r| match r {
-            Ok(()) => None,
-            Err(e) => Some(e),
-        })
-        .collect();
 
     if !errors.is_empty() {
         let msg = errors.into_iter().map(|e| e.to_string()).collect::<Vec<String>>().join(",");
-        let msg = format!("At least one thread returned error: {}", msg);
-        bail!("{}", msg);
+        bail!("At least one thread returned error: {}", msg);
     }
 
     debug!("done");
