@@ -174,8 +174,27 @@ DEFINE_BPF_PROG("uprobe/make_active", AID_UPROBESTATS, AID_UPROBESTATS,
 
   bpf_probe_read_user(&output->pid, 4, (void *)(ctx->regs[1] + 0xe8));
   bpf_probe_read_user(&output->uid, 4, (void *)(ctx->regs[1] + 0xf4));
-  void *process_name = 0;
+  uint8_t *process_name = 0;
   bpf_probe_read_user(&process_name, 4, (void *)(ctx->regs[1] + 0xa0));
+  recordString(process_name, 256, output->process_name);
+
+  bpf_process_change_output_buf_submit(output);
+  return 0;
+}
+
+DEFINE_BPF_PROG("uprobe/on_process_active", AID_UPROBESTATS, AID_UPROBESTATS,
+                BPF_KPROBE6)
+(struct pt_regs *ctx) {
+  struct ProcessChange *output = bpf_process_change_output_buf_reserve();
+  if (output == NULL)
+    return 1;
+
+  uint8_t *process_record_ptr = 0;
+  bpf_probe_read_user(&process_record_ptr, 4, (void *)(ctx->regs[1] + 0x8));
+  bpf_probe_read_user(&output->pid, 4, (void *)(process_record_ptr + 0xe8));
+  bpf_probe_read_user(&output->uid, 4, (void *)(process_record_ptr + 0xf4));
+  uint8_t *process_name = 0;
+  bpf_probe_read_user(&process_name, 4, (void *)(process_record_ptr + 0xa0));
   recordString(process_name, 256, output->process_name);
 
   bpf_process_change_output_buf_submit(output);

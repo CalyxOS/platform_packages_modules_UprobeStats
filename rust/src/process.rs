@@ -36,13 +36,22 @@ pub(crate) fn get_pid_and_uid(
 fn wait_for_app_start(process_name: Option<&str>, duration: Duration) -> Result<(i32, i32)> {
     let system_server_pid =
         get_pid("system_server").ok_or(anyhow!("failed to get system server pid"))?;
-    let process_record_offsets = get_ProcessRecord_makeActive_offsets()?;
+    let (offsets, bpf_prog_name) = match get_ProcessRecord_makeActive_offsets() {
+        Ok(offsets) => (offsets, BPF_PROG_PROCESS_MANAGEMENT_MAKE_ACTIVE),
+        Err(e) => {
+            debug!(
+                "Could not find offsets for ProcessRecord#makeActive, trying onProcessActive: {e}"
+            );
+            (get_onProcessActive_offsets()?, BPF_PROG_PROCESS_MANAGEMENT_ON_PROCESS_ACTIVE)
+        }
+    };
+
     debug!("attaching process management bpf for app start");
     bpf_perf_event_open(
-        process_record_offsets.get_container_path(),
-        process_record_offsets.get_method_offset().try_into()?,
+        offsets.get_container_path(),
+        offsets.get_method_offset().try_into()?,
         system_server_pid,
-        prefix_bpf(BPF_PROG_PROCESS_MANAGEMENT),
+        prefix_bpf(bpf_prog_name),
     )?;
 
     let timer = Timer::new(duration);
@@ -107,12 +116,31 @@ fn get_ProcessRecord_makeActive_offsets() -> Result<ExecutableMethodFileOffsets>
     offsets.ok_or(anyhow!("Could not find offsets for ProcessRecord#makeActive"))
 }
 
+#[allow(non_snake_case)]
+fn get_onProcessActive_offsets() -> Result<ExecutableMethodFileOffsets> {
+    let offsets = ExecutableMethodFileOffsets::get(
+        &TargetProcess::system_server()?,
+        &MethodDescriptor::new(
+            CLASS_PROCESS_PROFILE_RECORD,
+            METHOD_ON_PROCESS_ACTIVE,
+            METHOD_ON_PROCESS_ACTIVE_PARAMS.into_iter().map(String::from),
+        )?,
+    )?;
+    offsets.ok_or(anyhow!("Could not find offsets for ProcessProfileRecord#onProcessActive"))
+}
+
 const CLASS_PROCESS_RECORD: &str = "com.android.server.am.ProcessRecord";
 const METHOD_MAKE_ACTIVE: &str = "makeActive";
 const METHOD_MAKE_ACTIVE_PARAMS: [&str; 2] = [
     "com.android.server.am.ApplicationThreadDeferred",
     "com.android.server.am.ProcessStatsService",
 ];
+const CLASS_PROCESS_PROFILE_RECORD: &str = "com.android.server.am.ProcessProfileRecord";
+const METHOD_ON_PROCESS_ACTIVE: &str = "onProcessActive";
+const METHOD_ON_PROCESS_ACTIVE_PARAMS: [&str; 2] =
+    ["android.app.IApplicationThread", "com.android.server.am.ProcessStatsService"];
 
-const BPF_PROG_PROCESS_MANAGEMENT: &str = "prog_ProcessManagement_uprobe_make_active";
+const BPF_PROG_PROCESS_MANAGEMENT_MAKE_ACTIVE: &str = "prog_ProcessManagement_uprobe_make_active";
+const BPF_PROG_PROCESS_MANAGEMENT_ON_PROCESS_ACTIVE: &str =
+    "prog_ProcessManagement_uprobe_on_process_active";
 const BPF_MAP_PROCESS_MANAGEMENT: &str = "map_ProcessManagement_process_change_output_buf";

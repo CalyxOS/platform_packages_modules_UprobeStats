@@ -1,19 +1,22 @@
 //! UProbestats executable.
 use anyhow::{anyhow, bail, ensure, Result};
 use binder::ProcessState;
-use log::{debug, error, Level, LevelFilter};
+use log::{debug, error, LevelFilter};
 use rustutils::system_properties;
-use std::{cmp::min, process::exit, str::FromStr, thread, time::Duration};
+use std::{
+    cmp::{max, min},
+    process::exit,
+    str::FromStr,
+    thread,
+    time::Duration,
+};
 use uprobestats_bpf::bpf_perf_event_open;
 use uprobestats_rs::{bpf_map, config_resolver, guardrail};
 
 fn main() {
-    let log_level_prop: String = system_properties::read("log.tag.uprobestats")
-        .ok()
-        .flatten()
-        .unwrap_or(Level::Info.to_string());
-    let log_level_filter =
-        Level::from_str(&log_level_prop).unwrap_or(Level::Info).to_level_filter();
+    let log_tag_filter = level_filter_from_property_or_info("log.tag.uprobestats");
+    let persist_log_tag_filter = level_filter_from_property_or_info("persist.log.tag.uprobestats");
+    let log_level_filter = max(log_tag_filter, persist_log_tag_filter);
 
     logger::init(logger::Config::default().with_tag_on_device("uprobestats").with_max_level(
         if is_user_build() { min(LevelFilter::Info, log_level_filter) } else { log_level_filter },
@@ -49,7 +52,11 @@ fn main_impl() -> Result<()> {
     let task = config_resolver::resolve_single_task(config)?;
 
     let probes = config_resolver::resolve_probes(&task)?;
-    for probe in probes {
+    for probe in &probes {
+        debug!(
+            "attaching bpf {} to {} at {}",
+            probe.bpf_program_path, &probe.filename, &probe.offset
+        );
         bpf_perf_event_open(
             probe.filename.clone(),
             probe.offset,
@@ -57,42 +64,33 @@ fn main_impl() -> Result<()> {
             probe.bpf_program_path.clone(),
         )?;
         debug!(
-            "attached bpf {} to {} at {}",
+            "successfully attached bpf {} to {} at {}",
             probe.bpf_program_path, &probe.filename, &probe.offset
         );
     }
 
     let duration = Duration::from_secs(task.duration_seconds.try_into()?);
-    let results: Vec<_> = task
-        .bpf_map_paths
-        .into_iter()
-        .map(|map_path| {
-            debug!("Spawning thread for map_path: {}", map_path);
-            let task_proto = task.task.clone();
-            let map_path_clone = map_path.clone();
-            let thr =
-                thread::spawn(move || bpf_map::poll_registry(&map_path, task_proto, duration));
-            debug!("Spawned thread for map_path: {}", map_path_clone);
-            thr
-        })
-        .collect();
+    let errors = thread::scope(|s| {
+        let mut handles = vec![];
+        for map_path in &task.bpf_map_paths {
+            let task_ref = &task;
+            handles.push(s.spawn(move || {
+                debug!("Spawned thread for map_path: {}", map_path);
+                bpf_map::poll_registry(map_path, task_ref, duration)
+                    .map_err(|e| anyhow!("poll_registry error: {}", e))
+            }));
+        }
 
-    let results = results.into_iter().map(|result| match result.join() {
-        Ok(result) => result.map_err(|e| anyhow!("Thread error: {}", e)),
-        Err(panic) => bail!("Thread panic: {:?}", panic),
+        handles
+            .into_iter()
+            .map(|handle| handle.join().map_err(|p| anyhow!("Thread panic: {p:?}")).and_then(|r| r))
+            .filter_map(|r| r.err())
+            .collect::<Vec<_>>()
     });
-
-    let errors: Vec<_> = results
-        .filter_map(|r| match r {
-            Ok(()) => None,
-            Err(e) => Some(e),
-        })
-        .collect();
 
     if !errors.is_empty() {
         let msg = errors.into_iter().map(|e| e.to_string()).collect::<Vec<String>>().join(",");
-        let msg = format!("At least one thread returned error: {}", msg);
-        bail!("{}", msg);
+        bail!("At least one thread returned error: {}", msg);
     }
 
     debug!("done");
@@ -105,4 +103,11 @@ fn is_user_build() -> bool {
         return val == "user";
     }
     true
+}
+
+fn level_filter_from_property_or_info(property: &str) -> LevelFilter {
+    LevelFilter::from_str(
+        system_properties::read(property).ok().flatten().unwrap_or("".to_string()).as_str(),
+    )
+    .unwrap_or(LevelFilter::Info)
 }
