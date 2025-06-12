@@ -69,9 +69,12 @@ struct ProcessChange {
 };
 
 struct BitmapAllocation {
+  __u32 type;
   __u32 width;
   __u32 height;
   __u32 pixel_storage_type;
+  __u32 bitmap_size;
+  void* native_ptr;
 };
 
 int pollRingBuf(const char *mapPath, int timeoutMs, size_t valueSize,

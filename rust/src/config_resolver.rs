@@ -176,8 +176,14 @@ pub fn read_config(config_path: &str) -> Result<UprobestatsConfig> {
 fn is_bpf_file_enabled(bpf_prog_or_map_name: &str) -> bool {
     if bpf_prog_or_map_name.contains("DisruptiveApp") {
         uprobestats_mainline_flags_rust::uprobestats_monitor_disruptive_app_activities()
+    } else if bpf_prog_or_map_name
+        .contains("prog_BitmapAllocation_uprobe_bitmap_creation_for_snapshot")
+        || bpf_prog_or_map_name.contains("prog_BitmapAllocation_uprobe_apply_free_function")
+    {
+        uprobestats_mainline_flags_rust::enable_bitmap_snapshot()
     } else if bpf_prog_or_map_name.contains("BitmapAllocation") {
         uprobestats_mainline_flags_rust::enable_bitmap_instrumentation()
+            || uprobestats_mainline_flags_rust::enable_bitmap_snapshot()
     } else {
         true
     }

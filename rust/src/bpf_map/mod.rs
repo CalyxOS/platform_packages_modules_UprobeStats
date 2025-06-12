@@ -1,5 +1,5 @@
 //! Deals with fetching data BPF ring buffers ("maps").
-use crate::bpf_map::bitmap_allocation::BitmapAllocationHandler;
+use crate::bpf_map::bitmap_allocation::{BitmapAllocationHandlerV0, BitmapAllocationHandlerV1};
 use crate::bpf_map::disruptive_app::{BindServiceLockedHandler, ComponentEnabledSettingHandler};
 use crate::bpf_map::generic_instrumentation::{CallResultHandler, CallTimestampHandler};
 use crate::bpf_map::process_management::{
@@ -51,6 +51,7 @@ fn poll_loop_generic<H: Handler + Default>(
             handler.on_item(task, i)?;
         }
     }
+    handler.on_finished()?;
     Ok(())
 }
 
@@ -64,6 +65,9 @@ unsafe trait Handler {
     const MAP_PATH: &'static str;
     type T: Debug + Copy;
     fn on_item(&mut self, task: &ResolvedTask, data: &Self::T) -> Result<()>;
+    fn on_finished(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 fn register_handler<H: Handler + Default>(handler_registry: &mut HandlerRegistry) {
@@ -73,7 +77,11 @@ fn register_handler<H: Handler + Default>(handler_registry: &mut HandlerRegistry
 static HANDLER_REGISTRY: LazyLock<HandlerRegistry> = LazyLock::new(|| {
     let mut map = HashMap::new();
     register_handler::<BindServiceLockedHandler>(&mut map);
-    register_handler::<BitmapAllocationHandler>(&mut map);
+    if uprobestats_mainline_flags_rust::enable_bitmap_snapshot() {
+        register_handler::<BitmapAllocationHandlerV1>(&mut map);
+    } else {
+        register_handler::<BitmapAllocationHandlerV0>(&mut map);
+    }
     register_handler::<CallTimestampHandler>(&mut map);
     register_handler::<CallResultHandler>(&mut map);
     register_handler::<ComponentEnabledSettingHandler>(&mut map);
