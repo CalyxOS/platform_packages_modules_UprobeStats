@@ -11,13 +11,19 @@ use uprobestats_bpf::{bpf_perf_event_open, poll_ring_buf};
 use uprobestats_bpf_bindgen::ProcessChange;
 use uprobestats_proto::config::uprobestats_config::task::TargetProcessSelection;
 
-pub(crate) fn get_pid_and_uid(
+pub(crate) struct ResolvedProcess {
+    pub(crate) pid: i32,
+    pub(crate) uid: i32,
+    pub(crate) name: String,
+}
+
+pub(crate) fn resolve_process(
     target_process_name: &str,
     target_process_selection: TargetProcessSelection,
     duration: Duration,
-) -> Result<(i32, i32)> {
+) -> Result<ResolvedProcess> {
     debug!(
-        "get_pid_and_uid: process_name: {} process_selection: {:?}",
+        "resolve_process: process_name: {} process_selection: {:?}",
         target_process_name, target_process_selection
     );
     match target_process_selection {
@@ -28,12 +34,12 @@ pub(crate) fn get_pid_and_uid(
         TargetProcessSelection::SPECIFIC_PROCESS_NAME | TargetProcessSelection::UNKNOWN => {
             let pid = get_pid(target_process_name)
                 .ok_or(anyhow!("Can't find pid for {}", target_process_name))?;
-            Ok((pid, 0))
+            Ok(ResolvedProcess { pid, uid: 0, name: target_process_name.to_string() })
         }
     }
 }
 
-fn wait_for_app_start(process_name: Option<&str>, duration: Duration) -> Result<(i32, i32)> {
+fn wait_for_app_start(process_name: Option<&str>, duration: Duration) -> Result<ResolvedProcess> {
     let system_server_pid =
         get_pid("system_server").ok_or(anyhow!("failed to get system server pid"))?;
     let (offsets, bpf_prog_name) = match get_ProcessRecord_makeActive_offsets() {
@@ -72,7 +78,11 @@ fn wait_for_app_start(process_name: Option<&str>, duration: Duration) -> Result<
                     "detected process start: pid: {} uid: {}",
                     process_change.pid, process_change.uid
                 );
-                return Ok((process_change.pid, process_change.uid));
+                return Ok(ResolvedProcess {
+                    pid: process_change.pid,
+                    uid: process_change.uid,
+                    name: result_process_name.to_string(),
+                });
             }
         }
     }
