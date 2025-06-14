@@ -47,10 +47,23 @@ DEFINE_BPF_PROG("uprobe/bitmap_constructor_heap", AID_UPROBESTATS, AID_UPROBESTA
 }
 
 struct BitmapAllocation {
+  __u32 type;
   __u32 width;
   __u32 height;
   __u32 pixel_storage_type;
+  __u32 bitmap_size;
+  void* native_ptr;
 };
+
+struct BitmapKey {
+  __u64 tgid;
+  void* native_ptr;
+};
+
+DEFINE_BPF_MAP_EXT(active_bitmaps, HASH, struct BitmapKey, bool, 5000,
+                   AID_UPROBESTATS, AID_UPROBESTATS, 0060, "", "", PRIVATE,
+                   BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,
+                   LOAD_ON_USER, LOAD_ON_USERDEBUG, 0);
 
 int load(void *dest, int offset, int length, void *user_space_address) {
   long canonical_address = (long)user_space_address & 0x00FFFFFFFFFFFFFF;
@@ -81,6 +94,64 @@ DEFINE_BPF_PROG("uprobe/bitmap_creation", AID_UPROBESTATS, AID_UPROBESTATS,
   // 0x78 is the offset of pixel_storage_type into a Bitmap object.
   load(&output->pixel_storage_type, 0x78, 4, bitmap_ptr);
 
+  bpf_output_submit(output);
+  return 0;
+}
+
+DEFINE_BPF_PROG("uprobe/bitmap_creation_for_snapshot", AID_UPROBESTATS, AID_UPROBESTATS,
+                BPF_KPROBE4)
+(struct pt_regs *ctx) {
+
+  struct BitmapAllocation *output = bpf_output_reserve();
+  if (output == NULL)
+    return 1;
+  output->width = ctx->regs[4];
+  output->height = ctx->regs[5];
+
+  uint8_t *bitmap_wrapper_ptr = (uint8_t *)(ctx->regs[3]);
+  uint8_t *bitmap_ptr;
+  // The first 8 bytes of a BitmapWrapper object is the pointer to the
+  // underlying Bitmap.
+  load(&bitmap_ptr, 0, 8, bitmap_wrapper_ptr);
+  // 0x78 is the offset of pixel_storage_type into a Bitmap object.
+  load(&output->pixel_storage_type, 0x78, 4, bitmap_ptr);
+
+  int heap_size;
+  load(&heap_size, 152, 4, bitmap_ptr);
+  output->bitmap_size = heap_size;
+
+  output->type = 0;
+  output->native_ptr = (void*)bitmap_wrapper_ptr;
+
+  bool active = true;
+  struct BitmapKey bitmap_key;
+  bitmap_key.tgid = bpf_get_current_pid_tgid() >> 32;
+  bitmap_key.native_ptr = bitmap_wrapper_ptr;
+  bpf_active_bitmaps_update_elem(&bitmap_key, &active, BPF_NOEXIST);
+
+  bpf_output_submit(output);
+  return 0;
+}
+
+DEFINE_BPF_PROG("uprobe/apply_free_function", AID_UPROBESTATS,
+                AID_UPROBESTATS, BPF_KPROBE5)
+(struct pt_regs *ctx) {
+  uint8_t *native_ptr;
+  bpf_probe_read_user(&native_ptr, 8, (void *)(ctx->regs[1] + 16));
+
+  struct BitmapKey bitmap_key;
+  bitmap_key.tgid = bpf_get_current_pid_tgid() >> 32;
+  bitmap_key.native_ptr = native_ptr;
+  if (!bpf_active_bitmaps_lookup_elem(&bitmap_key)) {
+    return 0;
+  }
+  bpf_active_bitmaps_delete_elem(&bitmap_key);
+
+  struct BitmapAllocation *output = bpf_output_reserve();
+  if (output == NULL)
+    return 1;
+  output->type = 1;
+  output->native_ptr = (void*)native_ptr;
   bpf_output_submit(output);
   return 0;
 }

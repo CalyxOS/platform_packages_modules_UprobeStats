@@ -19,7 +19,7 @@ use uprobestats_proto::config::{
     UprobestatsConfig,
 };
 
-use crate::{art::get_method_offset_from_oatdump, process::get_pid_and_uid};
+use crate::{art::get_method_offset_from_oatdump, process::resolve_process};
 
 /// Validated probe proto + probe target's code filename and offset.
 pub struct ResolvedProbe {
@@ -81,13 +81,20 @@ pub fn resolve_single_task(config: UprobestatsConfig) -> Result<ResolvedTask> {
         .unwrap_or(TargetProcessSelection::UNKNOWN.into())
         .enum_value_or_default();
 
-    let (pid, uid) = get_pid_and_uid(
+    let resolved_process = resolve_process(
         &process_name,
         target_process_selection,
         Duration::from_secs(duration_seconds.try_into()?),
     )?;
 
-    Ok(ResolvedTask { duration_seconds, task, process_name, pid, uid, bpf_map_paths })
+    Ok(ResolvedTask {
+        duration_seconds,
+        task,
+        process_name: resolved_process.name,
+        pid: resolved_process.pid,
+        uid: resolved_process.uid,
+        bpf_map_paths,
+    })
 }
 
 /// Validates a single probe proto and adds additional info.
@@ -176,8 +183,14 @@ pub fn read_config(config_path: &str) -> Result<UprobestatsConfig> {
 fn is_bpf_file_enabled(bpf_prog_or_map_name: &str) -> bool {
     if bpf_prog_or_map_name.contains("DisruptiveApp") {
         uprobestats_mainline_flags_rust::uprobestats_monitor_disruptive_app_activities()
+    } else if bpf_prog_or_map_name
+        .contains("prog_BitmapAllocation_uprobe_bitmap_creation_for_snapshot")
+        || bpf_prog_or_map_name.contains("prog_BitmapAllocation_uprobe_apply_free_function")
+    {
+        uprobestats_mainline_flags_rust::enable_bitmap_snapshot()
     } else if bpf_prog_or_map_name.contains("BitmapAllocation") {
         uprobestats_mainline_flags_rust::enable_bitmap_instrumentation()
+            || uprobestats_mainline_flags_rust::enable_bitmap_snapshot()
     } else {
         true
     }
