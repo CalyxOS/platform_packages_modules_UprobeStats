@@ -63,7 +63,7 @@ struct BitmapKey {
 DEFINE_BPF_MAP_EXT(active_bitmaps, HASH, struct BitmapKey, bool, 5000,
                    AID_UPROBESTATS, AID_UPROBESTATS, 0060, "", "", PRIVATE,
                    BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,
-                   LOAD_ON_USER, LOAD_ON_USERDEBUG, 0);
+                   LOAD_ON_USER, LOAD_ON_USERDEBUG);
 
 int load(void *dest, int offset, int length, void *user_space_address) {
   long canonical_address = (long)user_space_address & 0x00FFFFFFFFFFFFFF;
