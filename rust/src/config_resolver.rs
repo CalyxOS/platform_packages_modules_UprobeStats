@@ -191,6 +191,8 @@ fn is_bpf_file_enabled(bpf_prog_or_map_name: &str) -> bool {
     } else if bpf_prog_or_map_name.contains("BitmapAllocation") {
         uprobestats_mainline_flags_rust::enable_bitmap_instrumentation()
             || uprobestats_mainline_flags_rust::enable_bitmap_snapshot()
+    } else if bpf_prog_or_map_name.contains("BinderExecTransactInternal") {
+        uprobestats_mainline_flags_rust::enable_binder_transaction_poc()
     } else {
         true
     }

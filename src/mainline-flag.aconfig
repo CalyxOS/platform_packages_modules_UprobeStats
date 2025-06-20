@@ -48,3 +48,11 @@ flag {
     bug: "400457896"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "enable_binder_transaction_poc"
+    namespace: "responsible_apis"
+    description: "Whether to enable the binder transaction instrumentation proof-of-concept"
+    bug: "408255571"
+    is_fixed_read_only: true
+}

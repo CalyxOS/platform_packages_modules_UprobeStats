@@ -77,6 +77,10 @@ struct BitmapAllocation {
   void* native_ptr;
 };
 
+struct BinderTransaction {
+  int calling_uid;
+};
+
 int pollRingBuf(const char *mapPath, int timeoutMs, size_t valueSize,
                 void (*callback)(const void *, void *), void *cookie);
 int bpfPerfEventOpen(const char *filename, int offset, int pid,
