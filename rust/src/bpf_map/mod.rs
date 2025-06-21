@@ -1,4 +1,5 @@
 //! Deals with fetching data BPF ring buffers ("maps").
+use crate::bpf_map::binder_transaction::BinderTransactionHandler;
 use crate::bpf_map::bitmap_allocation::{BitmapAllocationHandlerV0, BitmapAllocationHandlerV1};
 use crate::bpf_map::disruptive_app::{BindServiceLockedHandler, ComponentEnabledSettingHandler};
 use crate::bpf_map::generic_instrumentation::{CallResultHandler, CallTimestampHandler};
@@ -13,6 +14,7 @@ use std::{collections::HashMap, ffi::CStr, fmt::Debug, sync::LazyLock, time::Dur
 use uprobestats_bpf::poll_ring_buf;
 use zerocopy::{Immutable, IntoBytes};
 
+mod binder_transaction;
 mod bitmap_allocation;
 mod disruptive_app;
 mod generic_instrumentation;
@@ -81,6 +83,9 @@ static HANDLER_REGISTRY: LazyLock<HandlerRegistry> = LazyLock::new(|| {
         register_handler::<BitmapAllocationHandlerV1>(&mut map);
     } else {
         register_handler::<BitmapAllocationHandlerV0>(&mut map);
+    }
+    if uprobestats_mainline_flags_rust::enable_binder_transaction_poc() {
+        register_handler::<BinderTransactionHandler>(&mut map);
     }
     register_handler::<CallTimestampHandler>(&mut map);
     register_handler::<CallResultHandler>(&mut map);

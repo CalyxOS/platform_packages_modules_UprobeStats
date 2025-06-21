@@ -18,6 +18,7 @@ package test;
 
 import static android.uprobestats.flags.Flags.FLAG_ENABLE_UPROBESTATS;
 import static android.uprobestats.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS;
+import static android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BINDER_TRANSACTION_POC;
 import static android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BITMAP_INSTRUMENTATION;
 import static android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BITMAP_SNAPSHOT;
 import static android.uprobestats.mainline.flags.Flags.FLAG_UPROBESTATS_MONITOR_DISRUPTIVE_APP_ACTIVITIES;
@@ -43,6 +44,7 @@ import com.android.os.uprobestats.AndroidGraphicsBitmapAllocated;
 import com.android.os.uprobestats.AndroidGraphicsBitmapAllocationSnapshot;
 import com.android.os.uprobestats.BindServiceLockedWithBalFlagsReported;
 import com.android.os.uprobestats.SetComponentEnabledSettingReported;
+import com.android.os.uprobestats.TestUprobeStatsAtomReported;
 import com.android.os.uprobestats.UprobestatsExtensionAtoms;
 
 import com.android.tradefed.device.DeviceNotAvailableException;
@@ -53,6 +55,7 @@ import com.android.tradefed.util.RunUtil;
 import com.google.protobuf.ExtensionRegistry;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -68,6 +71,7 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
     private static final String BITMAP_ALLOCATION_CONFIG = "bitmap.textproto";
     private static final String BITMAP_ALLOCATION_SNAPSHOT_CONFIG = "bitmap_snapshot.textproto";
     private static final String BITMAP_TESTAPP_PACKAGE_NAME = "com.android.uprobestats.bitmap";
+    private static final String BINDER_TRANSACTION_CONFIG = "binder.textproto";
     private ExtensionRegistry mRegistry;
 
     @Rule
@@ -308,5 +312,43 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
                                     .count())
                     .isEqualTo(2);
         }
+    }
+
+    @Test
+    @Ignore // TODO(mattgilbride): re-enable once the test app is fixed
+    @RequiresFlagsEnabled({
+        FLAG_ENABLE_UPROBESTATS,
+        FLAG_EXECUTABLE_METHOD_FILE_OFFSETS,
+        FLAG_ENABLE_BINDER_TRANSACTION_POC,
+    })
+    public void binderTransaction() throws Exception {
+        assumeTrue(CpuFeatures.isArm64(getDevice()));
+
+        configureStatsDAndStartUprobeStats(
+                getClass(),
+                getDevice(),
+                BINDER_TRANSACTION_CONFIG,
+                UprobestatsExtensionAtoms.TEST_UPROBESTATS_ATOM_REPORTED_FIELD_NUMBER);
+
+        getDevice()
+                .executeShellCommand( // TODO(mattgilbride): use a separate test app
+                        "killall -9 com.android.uprobestats.disruptive");
+        getDevice()
+                .executeShellCommand(
+                        "am start -n" + " com.android.uprobestats.disruptive/.TestActivity");
+
+        // Allow UprobeStats/StatsD time to collect metric
+        RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
+
+        // See if the atom made it
+        List<StatsLog.EventMetricData> data =
+                ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
+        assertThat(data.size()).isEqualTo(1);
+
+        TestUprobeStatsAtomReported reported =
+                data.get(0)
+                        .getAtom()
+                        .getExtension(UprobestatsExtensionAtoms.testUprobestatsAtomReported);
+        assertThat(reported.getFirstField()).isGreaterThan(0);
     }
 }

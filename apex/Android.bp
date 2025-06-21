@@ -62,6 +62,7 @@ apex {
         "GenericInstrumentation.o",
         "ProcessManagement.o",
         "DisruptiveApp.o",
+        "BinderExecTransactInternal.o",
     ],
 
     native_shared_libs: [
