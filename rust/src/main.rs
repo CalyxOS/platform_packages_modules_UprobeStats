@@ -1,5 +1,6 @@
 //! UProbestats executable.
 use anyhow::{anyhow, bail, ensure, Result};
+use atrace::{atrace_begin, atrace_end, AtraceTag};
 use binder::ProcessState;
 use log::{debug, error, LevelFilter};
 use rustutils::system_properties;
@@ -14,6 +15,7 @@ use uprobestats_bpf::bpf_perf_event_open;
 use uprobestats_rs::{bpf_map, config_resolver, guardrail};
 
 fn main() {
+    atrace_begin(AtraceTag::App, "uprobestats_rs::main");
     let log_tag_filter = level_filter_from_property_or_info("log.tag.uprobestats");
     let persist_log_tag_filter = level_filter_from_property_or_info("persist.log.tag.uprobestats");
     let log_level_filter = max(log_tag_filter, persist_log_tag_filter);
@@ -24,8 +26,11 @@ fn main() {
 
     if let Err(e) = main_impl() {
         error!("{}", e);
+        atrace_end(AtraceTag::App);
         exit(1);
     };
+
+    atrace_end(AtraceTag::App);
 }
 
 fn main_impl() -> Result<()> {
