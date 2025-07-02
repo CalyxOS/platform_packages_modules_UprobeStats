@@ -172,8 +172,8 @@ DEFINE_BPF_PROG("uprobe/make_active", AID_UPROBESTATS, AID_UPROBESTATS,
   if (output == NULL)
     return 1;
 
-  bpf_probe_read_user(&output->pid, 4, (void *)(ctx->regs[1] + 0xe8));
-  bpf_probe_read_user(&output->uid, 4, (void *)(ctx->regs[1] + 0xf4));
+  bpf_probe_read_user(&output->pid, 4, (void *)(ctx->regs[1] + 0xe4));
+  bpf_probe_read_user(&output->uid, 4, (void *)(ctx->regs[1] + 0xf0));
   uint8_t *process_name = 0;
   bpf_probe_read_user(&process_name, 4, (void *)(ctx->regs[1] + 0xa0));
   recordString(process_name, 256, output->process_name);
@@ -191,8 +191,8 @@ DEFINE_BPF_PROG("uprobe/on_process_active", AID_UPROBESTATS, AID_UPROBESTATS,
 
   uint8_t *process_record_ptr = 0;
   bpf_probe_read_user(&process_record_ptr, 4, (void *)(ctx->regs[1] + 0x8));
-  bpf_probe_read_user(&output->pid, 4, (void *)(process_record_ptr + 0xe8));
-  bpf_probe_read_user(&output->uid, 4, (void *)(process_record_ptr + 0xf4));
+  bpf_probe_read_user(&output->pid, 4, (void *)(process_record_ptr + 0xe4));
+  bpf_probe_read_user(&output->uid, 4, (void *)(process_record_ptr + 0xf0));
   uint8_t *process_name = 0;
   bpf_probe_read_user(&process_name, 4, (void *)(process_record_ptr + 0xa0));
   recordString(process_name, 256, output->process_name);
