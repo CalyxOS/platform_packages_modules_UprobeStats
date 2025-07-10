@@ -18,23 +18,27 @@ pub(crate) struct ResolvedProcess {
 }
 
 pub(crate) fn resolve_process(
-    target_process_name: &str,
+    target_process_name: Option<&str>, // Make process name optional
     target_process_selection: TargetProcessSelection,
     duration: Duration,
 ) -> Result<ResolvedProcess> {
     debug!(
-        "resolve_process: process_name: {} process_selection: {:?}",
+        "resolve_process: process_name: {:?} process_selection: {:?}",
         target_process_name, target_process_selection
     );
     match target_process_selection {
         TargetProcessSelection::SPECIFIC_APP_PROCESS_ON_START => {
-            wait_for_app_start(Some(target_process_name), duration)
+            wait_for_app_start(target_process_name, duration)
         }
         TargetProcessSelection::ANY_APP_PROCESS_ON_START => wait_for_app_start(None, duration),
         TargetProcessSelection::SPECIFIC_PROCESS_NAME | TargetProcessSelection::UNKNOWN => {
-            let pid = get_pid(target_process_name)
-                .ok_or(anyhow!("Can't find pid for {}", target_process_name))?;
-            Ok(ResolvedProcess { pid, uid: 0, name: target_process_name.to_string() })
+            let process_name = target_process_name.ok_or(anyhow!(
+                "Process name is required for selection type {:?}",
+                target_process_selection
+            ))?;
+            let pid =
+                get_pid(process_name).ok_or(anyhow!("Can't find pid for {}", process_name))?;
+            Ok(ResolvedProcess { pid, uid: 0, name: process_name.to_string() })
         }
     }
 }

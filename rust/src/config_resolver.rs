@@ -71,18 +71,13 @@ pub fn resolve_single_task(config: UprobestatsConfig) -> Result<ResolvedTask> {
         return Err(anyhow!("Task duration must be greater than 0"));
     }
 
-    let process_name = task
-        .target_process_name
-        .clone()
-        .ok_or_else(|| anyhow!("Target process name is required"))?;
-
     let target_process_selection = task
         .target_process_selection
         .unwrap_or(TargetProcessSelection::UNKNOWN.into())
         .enum_value_or_default();
 
     let resolved_process = resolve_process(
-        &process_name,
+        task.target_process_name.as_deref(), // Pass optional process name
         target_process_selection,
         Duration::from_secs(duration_seconds.try_into()?),
     )?;
