@@ -1,4 +1,4 @@
-use super::Handler;
+use super::{bytes_as_str, Handler};
 use crate::config_resolver::ResolvedTask;
 use anyhow::Result;
 use log::debug;
@@ -41,6 +41,7 @@ pub struct BitmapMetadata {
     pub width: i32,
     pub height: i32,
     pub pixel_storage_type: i32,
+    pub activity_name: String,
 }
 
 #[derive(Default)]
@@ -49,6 +50,7 @@ pub struct BitmapAllocationHandlerV1 {
     max_total_bitmap_size: i64,
     current_total_bitmap_size: i64,
     bitmap_snapshot_at_max_size: Vec<BitmapMetadata>,
+    activity_name: String,
 }
 
 // SAFETY: `BitmapAllocation` is a struct defined in the given `MAP_PATH`, and is guaranteed to match the
@@ -66,6 +68,7 @@ unsafe impl Handler for BitmapAllocationHandlerV1 {
                     width: data.width.try_into()?,
                     height: data.height.try_into()?,
                     pixel_storage_type: data.pixel_storage_type.try_into()?,
+                    activity_name: self.activity_name.clone(),
                 };
                 android_graphics_bitmap_allocated::stats_write(
                     metadata.uid,
@@ -86,6 +89,11 @@ unsafe impl Handler for BitmapAllocationHandlerV1 {
                 self.bitmaps.remove(&(data.native_ptr as u64));
                 let bitmap_size: i64 = data.bitmap_size.try_into()?;
                 self.current_total_bitmap_size -= bitmap_size;
+                Ok(())
+            }
+            2 => {
+                // Activity start
+                self.activity_name = bytes_as_str(&data.activity_name)?.to_string();
                 Ok(())
             }
             _ => Ok(()),
@@ -109,6 +117,7 @@ unsafe impl Handler for BitmapAllocationHandlerV1 {
                     convert_to_pixel_storage_type_enum(metadata.pixel_storage_type),
                     snapshot_id,
                     android_graphics_bitmap_allocation_snapshot::SnapshotType::SnapshotTypeMaxAllocationSize,
+                    &metadata.activity_name,
                 )?;
                 // Avoid flooding statsd.
                 sleep(Duration::from_millis(10));
@@ -125,6 +134,7 @@ unsafe impl Handler for BitmapAllocationHandlerV1 {
                     convert_to_pixel_storage_type_enum(metadata.pixel_storage_type),
                     snapshot_id,
                     android_graphics_bitmap_allocation_snapshot::SnapshotType::SnapshotTypeRandomSample,
+                    &metadata.activity_name,
                 )?;
                 // Avoid flooding statsd.
                 sleep(Duration::from_millis(10));
