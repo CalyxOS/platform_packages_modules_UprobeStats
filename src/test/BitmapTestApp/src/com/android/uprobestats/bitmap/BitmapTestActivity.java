@@ -25,8 +25,8 @@ public class BitmapTestActivity extends Activity {
     android.graphics.Bitmap longLivedBitmap;
 
     @Override
-    public void onCreate(Bundle bundle) {
-        super.onCreate(bundle);
+    protected void onStart() {
+        super.onStart();
         android.graphics.Bitmap.createBitmap(100, 100,
                 android.graphics.Bitmap.Config.ARGB_8888);
         BitmapFactory.Options options = new BitmapFactory.Options();

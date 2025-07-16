@@ -59,6 +59,7 @@ import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import java.util.stream.Collectors;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -283,7 +284,7 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
                                                             && reported.getUid() == uid)
                                     .count())
                     .isEqualTo(1);
-            Stream<AndroidGraphicsBitmapAllocationSnapshot> maxAllocationSizeSnapshot =
+            List<AndroidGraphicsBitmapAllocationSnapshot> maxAllocationSizeSnapshot =
                     data.stream()
                             .map(StatsLog.EventMetricData::getAtom)
                             .filter(
@@ -301,16 +302,17 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
                                             reported.getSnapshotType()
                                                     == AndroidGraphicsBitmapAllocationSnapshot
                                                             .SnapshotType
-                                                            .SNAPSHOT_TYPE_MAX_ALLOCATION_SIZE);
-            assertThat(
-                            maxAllocationSizeSnapshot
-                                    .filter(
-                                            reported ->
-                                                    reported.getWidth() == 48
-                                                            && reported.getHeight() == 48
-                                                            && reported.getUid() == uid)
-                                    .count())
-                    .isEqualTo(2);
+                                                            .SNAPSHOT_TYPE_MAX_ALLOCATION_SIZE)
+                            .filter(
+                                    reported ->
+                                            reported.getWidth() == 48
+                                                    && reported.getHeight() == 48
+                                                    && reported.getUid() == uid)
+                            .collect(Collectors.toList());
+
+            assertThat(maxAllocationSizeSnapshot.size()).isEqualTo(2);
+            assertThat(maxAllocationSizeSnapshot.get(0).getActivityName())
+                    .isEqualTo("com.android.uprobestats.bitmap.BitmapTestActivity");
         }
     }
 

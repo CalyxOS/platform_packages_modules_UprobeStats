@@ -46,6 +46,8 @@ DEFINE_BPF_PROG("uprobe/bitmap_constructor_heap", AID_UPROBESTATS, AID_UPROBESTA
     return 0;
 }
 
+#define MAX_STRING_LENGTH 128
+
 struct BitmapAllocation {
   __u32 type;
   __u32 width;
@@ -53,6 +55,7 @@ struct BitmapAllocation {
   __u32 pixel_storage_type;
   __u32 bitmap_size;
   void* native_ptr;
+  char activity_name[MAX_STRING_LENGTH];
 };
 
 struct BitmapKey {
@@ -152,6 +155,41 @@ DEFINE_BPF_PROG("uprobe/apply_free_function", AID_UPROBESTATS,
     return 1;
   output->type = 1;
   output->native_ptr = (void*)native_ptr;
+  bpf_output_submit(output);
+  return 0;
+}
+
+void recordString(void *jstring, unsigned int max_length, char *dest) {
+  // Assumes the following memory layout of a Java String object:
+  // byte offset 8-11: count (this is the length of the string * 2)
+  // byte offset 12-15: hash_code
+  // byte offset 16 and beyond: string content
+  __u32 count;
+  bpf_probe_read_user(&count, sizeof(count), jstring + 8);
+  count /= 2;
+  bpf_probe_read_user_str(dest, max_length < count + 1 ? max_length : count + 1,
+                          jstring + 16);
+}
+
+const int kComponentNameClassOffset = 8;
+
+DEFINE_BPF_PROG("uprobe/activity_perform_start", AID_UPROBESTATS,
+                AID_UPROBESTATS, BPF_KPROBE6)
+(struct pt_regs *ctx) {
+  struct BitmapAllocation *output = bpf_output_reserve();
+  if (output == NULL)
+    return 1;
+  output->type = 2;
+
+  uint8_t *component_name_ptr = 0;
+  bpf_probe_read_user(&component_name_ptr, 4, (void *)(ctx->regs[1] + 76));
+
+  void *intent_component_name_class_ptr = NULL;
+  bpf_probe_read_user(&intent_component_name_class_ptr, 4,
+                      component_name_ptr + kComponentNameClassOffset);
+  recordString(intent_component_name_class_ptr, MAX_STRING_LENGTH,
+               output->activity_name);
+
   bpf_output_submit(output);
   return 0;
 }

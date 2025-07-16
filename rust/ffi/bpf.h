@@ -75,6 +75,7 @@ struct BitmapAllocation {
   __u32 pixel_storage_type;
   __u32 bitmap_size;
   void* native_ptr;
+  char activity_name[128];
 };
 
 struct BinderTransaction {
