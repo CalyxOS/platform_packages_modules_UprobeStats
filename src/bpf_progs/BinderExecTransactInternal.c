@@ -20,36 +20,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
-struct pt_regs {
-  unsigned long regs[31];
-  unsigned long sp;
-  unsigned long pc;
-  unsigned long pr;
-  unsigned long sr;
-  unsigned long gbr;
-  unsigned long mach;
-  unsigned long macl;
-  long tra;
-};
-
-#define MAX_STRING_LENGTH 64
-
-void recordString(void *jstring, unsigned int max_length, char *dest) {
-  // Assumes the following memory layout of a Java String object:
-  // byte offset 8-11: count (this is the length of the string * 2)
-  // byte offset 12-15: hash_code
-  // byte offset 16 and beyond: string content
-  __u32 count;
-  bpf_probe_read_user(&count, sizeof(count), jstring + 8);
-  count /= 2;
-  bpf_probe_read_user_str(dest, max_length < count + 1 ? max_length : count + 1,
-                          jstring + 16);
-}
-
-struct BinderTransaction {
-  int calling_uid;
-};
+#include <uprobestats_bpf_fns.h>
+#include <uprobestats_bpf_structs.h>
 
 const int kBinderDescriptorOffset = 8;
 const char kTargetInterfaceDescriptor[MAX_STRING_LENGTH] =
