@@ -33,7 +33,7 @@ struct pt_regs {
   long tra;
 };
 
-#define MAX_STRING_LENGTH 64
+#define MAX_STRING_LENGTH 128
 
 struct BindServiceLocked {
   char intent_action[MAX_STRING_LENGTH];

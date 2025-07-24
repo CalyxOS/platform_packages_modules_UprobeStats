@@ -46,20 +46,22 @@ struct UpdateDeviceIdleTempAllowlistRecord {
   int calling_uid;
 };
 
+#define MAX_STRING_LENGTH 128
+
 struct BindServiceLocked {
-  char intent_action[64];
-  char intent_package[64];
-  char intent_component_name_package[64];
-  char intent_component_name_class[64];
+  char intent_action[MAX_STRING_LENGTH];
+  char intent_package[MAX_STRING_LENGTH];
+  char intent_component_name_package[MAX_STRING_LENGTH];
+  char intent_component_name_class[MAX_STRING_LENGTH];
   long bind_flags;
-  char calling_package[64];
+  char calling_package[MAX_STRING_LENGTH];
 };
 
 struct ComponentEnabledSetting {
-  char package_name[64];
-  char class_name[64];
+  char package_name[MAX_STRING_LENGTH];
+  char class_name[MAX_STRING_LENGTH];
   int new_state;
-  char calling_package_name[64];
+  char calling_package_name[MAX_STRING_LENGTH];
 };
 
 struct ProcessChange {

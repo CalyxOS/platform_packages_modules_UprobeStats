@@ -143,6 +143,9 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
         assertThat(balReported.getFlags())
                 .isEqualTo(1048576); // Context.BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS
         assertThat(balReported.getIntentPackageName()).isEqualTo("");
+        assertThat(balReported.getIntentAction()).isEqualTo("");
+        assertThat(balReported.getIntentComponentNamePackage()).isNotEmpty();
+        assertThat(balReported.getIntentComponentNameClass()).isNotEmpty();
     }
 
     @Test

@@ -67,6 +67,9 @@ unsafe impl Handler for BindServiceLockedHandler {
                 intent_package,
                 flags as _,
                 calling_package,
+                intent_action,
+                intent_component_name_package,
+                intent_component_name_class,
             )?;
         }
         Ok(())
