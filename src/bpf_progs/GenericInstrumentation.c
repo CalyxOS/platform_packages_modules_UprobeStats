@@ -20,7 +20,30 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <uprobestats_bpf_structs.h>
+
+// TODO: import this struct from generic header, access registers via generic
+// function
+struct pt_regs {
+  unsigned long regs[16];
+  unsigned long pc;
+  unsigned long pr;
+  unsigned long sr;
+  unsigned long gbr;
+  unsigned long mach;
+  unsigned long macl;
+  long tra;
+};
+
+// TODO: share this struct between bpf and uprobestats
+struct CallResult {
+  unsigned long pc;
+  unsigned long regs[10];
+};
+
+struct CallTimestamp {
+  unsigned int event;
+  unsigned long timestampNs;
+};
 
 DEFINE_BPF_RINGBUF_EXT(call_detail_buf, struct CallResult, 4096,
                        AID_UPROBESTATS, AID_UPROBESTATS, 0600, "", "", PRIVATE,
