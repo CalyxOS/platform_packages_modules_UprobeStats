@@ -14,75 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef __UPROBESTATSBPF_H__
-#define __UPROBESTATSBPF_H__
+#pragma once
 
 #include <sys/types.h>
 
 __BEGIN_DECLS
-
-struct CallTimestamp {
-  unsigned int event;
-  unsigned long timestampNs;
-};
-
-struct CallResult {
-  unsigned long pc;
-  unsigned long regs[10];
-};
-
-struct SetUidTempAllowlistStateRecord {
-  __u64 uid;
-  bool onAllowlist;
-};
-
-struct UpdateDeviceIdleTempAllowlistRecord {
-  int changing_uid;
-  bool adding;
-  long duration_ms;
-  int type;
-  int reason_code;
-  char reason[256];
-  int calling_uid;
-};
-
-#define MAX_STRING_LENGTH 128
-
-struct BindServiceLocked {
-  char intent_action[MAX_STRING_LENGTH];
-  char intent_package[MAX_STRING_LENGTH];
-  char intent_component_name_package[MAX_STRING_LENGTH];
-  char intent_component_name_class[MAX_STRING_LENGTH];
-  long bind_flags;
-  char calling_package[MAX_STRING_LENGTH];
-};
-
-struct ComponentEnabledSetting {
-  char package_name[MAX_STRING_LENGTH];
-  char class_name[MAX_STRING_LENGTH];
-  int new_state;
-  char calling_package_name[MAX_STRING_LENGTH];
-};
-
-struct ProcessChange {
-  int pid;
-  int uid;
-  char process_name[256];
-};
-
-struct BitmapAllocation {
-  __u32 type;
-  __u32 width;
-  __u32 height;
-  __u32 pixel_storage_type;
-  __u32 bitmap_size;
-  void* native_ptr;
-  char activity_name[128];
-};
-
-struct BinderTransaction {
-  int calling_uid;
-};
 
 int pollRingBuf(const char *mapPath, int timeoutMs, size_t valueSize,
                 void (*callback)(const void *, void *), void *cookie);
@@ -90,5 +26,3 @@ int bpfPerfEventOpen(const char *filename, int offset, int pid,
                      const char *bpfProgramPath);
 
 __END_DECLS
-
-#endif  // __UPROBESTATSBPF_H__
