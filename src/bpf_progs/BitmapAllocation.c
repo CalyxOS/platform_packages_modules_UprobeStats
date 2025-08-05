@@ -18,8 +18,20 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <bpf_helpers.h>
-#include <uprobestats_bpf_fns.h>
-#include <uprobestats_bpf_structs.h>
+
+// TODO: import this struct from generic header, access registers via generic
+// function
+struct pt_regs {
+  unsigned long regs[31];
+  unsigned long sp;
+  unsigned long pc;
+  unsigned long pr;
+  unsigned long sr;
+  unsigned long gbr;
+  unsigned long mach;
+  unsigned long macl;
+  long tra;
+};
 
 DEFINE_BPF_RINGBUF_EXT(output_buf, __u64, 4096, AID_UPROBESTATS, AID_UPROBESTATS, 0600, "", "",
                        PRIVATE, BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG, LOAD_ON_USER,
@@ -34,6 +46,18 @@ DEFINE_BPF_PROG("uprobe/bitmap_constructor_heap", AID_UPROBESTATS, AID_UPROBESTA
     return 0;
 }
 
+#define MAX_STRING_LENGTH 128
+
+struct BitmapAllocation {
+  __u32 type;
+  __u32 width;
+  __u32 height;
+  __u32 pixel_storage_type;
+  __u32 bitmap_size;
+  void* native_ptr;
+  char activity_name[MAX_STRING_LENGTH];
+};
+
 struct BitmapKey {
   __u64 tgid;
   void* native_ptr;
@@ -43,6 +67,12 @@ DEFINE_BPF_MAP_EXT(active_bitmaps, HASH, struct BitmapKey, bool, 5000,
                    AID_UPROBESTATS, AID_UPROBESTATS, 0060, "", "", PRIVATE,
                    BPFLOADER_MIN_VER, BPFLOADER_MAX_VER, LOAD_ON_ENG,
                    LOAD_ON_USER, LOAD_ON_USERDEBUG);
+
+int load(void *dest, int offset, int length, void *user_space_address) {
+  long canonical_address = (long)user_space_address & 0x00FFFFFFFFFFFFFF;
+  return bpf_probe_read_user(dest, length,
+                             (void *)(canonical_address + offset));
+}
 
 DEFINE_BPF_RINGBUF_EXT(output, struct BitmapAllocation, 16 * 1024,
                        AID_UPROBESTATS, AID_UPROBESTATS, 0600, "", "", PRIVATE,
@@ -127,6 +157,18 @@ DEFINE_BPF_PROG("uprobe/apply_free_function", AID_UPROBESTATS,
   output->native_ptr = (void*)native_ptr;
   bpf_output_submit(output);
   return 0;
+}
+
+void recordString(void *jstring, unsigned int max_length, char *dest) {
+  // Assumes the following memory layout of a Java String object:
+  // byte offset 8-11: count (this is the length of the string * 2)
+  // byte offset 12-15: hash_code
+  // byte offset 16 and beyond: string content
+  __u32 count;
+  bpf_probe_read_user(&count, sizeof(count), jstring + 8);
+  count /= 2;
+  bpf_probe_read_user_str(dest, max_length < count + 1 ? max_length : count + 1,
+                          jstring + 16);
 }
 
 const int kComponentNameClassOffset = 8;
