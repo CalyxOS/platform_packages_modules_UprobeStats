@@ -25,6 +25,9 @@ cc_library_shared {
     header_libs: [
         "uprobestats_bpf_headers",
     ],
+    export_header_lib_headers: [
+        "uprobestats_bpf_headers",
+    ],
     shared_libs: [
         "libandroid",
         "libbase",
