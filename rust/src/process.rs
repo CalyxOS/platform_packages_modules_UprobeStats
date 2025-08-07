@@ -23,8 +23,7 @@ pub(crate) fn resolve_process(
     duration: Duration,
 ) -> Result<ResolvedProcess> {
     debug!(
-        "resolve_process: process_name: {:?} process_selection: {:?}",
-        target_process_name, target_process_selection
+        "resolve_process: process_name: {target_process_name:?} process_selection: {target_process_selection:?}"
     );
     match target_process_selection {
         TargetProcessSelection::SPECIFIC_APP_PROCESS_ON_START => {

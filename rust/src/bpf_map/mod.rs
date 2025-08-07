@@ -109,26 +109,26 @@ mod test {
     fn print_xxd_like(prefix: &str, data: &(impl IntoBytes + Immutable)) {
         let data = data.as_bytes();
         let mut offset = 0;
-        debug!("{} hex:", prefix);
+        debug!("{prefix} hex:");
         for chunk in data.chunks(16) {
             // Format the offset
-            let offset_str = format!("{:08x}:", offset);
+            let offset_str = format!("{offset:08x}:");
             // Format the hexadecimal representation
             let hex_str = chunk
                 .iter()
                 .enumerate()
                 .map(|(i, &byte)| {
-                    let hex = format!("{:02x}", byte);
+                    let hex = format!("{byte:02x}");
                     if (i + 1) % 2 == 0 && i != chunk.len() - 1 {
-                        format!("{} ", hex)
+                        format!("{hex} ")
                     } else {
                         hex
                     }
                 })
                 .collect::<Vec<String>>()
                 .join(" ");
-            let padded_hex_str = format!("{:<48}", hex_str); // Pad to align ASCII
-                                                             // Format the ASCII representation
+            let padded_hex_str = format!("{hex_str:<48}"); // Pad to align ASCII
+                                                           // Format the ASCII representation
             let ascii_str = chunk
                 .iter()
                 .map(
@@ -141,7 +141,7 @@ mod test {
                     },
                 )
                 .collect::<String>();
-            debug!("{} {}  {}", offset_str, padded_hex_str, ascii_str);
+            debug!("{offset_str} {padded_hex_str}  {ascii_str}");
             offset += chunk.len();
         }
     }

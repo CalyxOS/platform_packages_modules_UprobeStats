@@ -21,7 +21,7 @@ unsafe impl Handler for SetUidTempAllowlistStateRecordHandler {
         task: &ResolvedTask,
         data: &SetUidTempAllowlistStateRecord,
     ) -> Result<()> {
-        debug!("SetUidTempAllowlistStateRecord: {:?}", data);
+        debug!("SetUidTempAllowlistStateRecord: {data:?}");
 
         let MessageField(Some(ref statsd_logging_config)) = task.task.statsd_logging_config else {
             return Ok(());
@@ -32,14 +32,14 @@ unsafe impl Handler for SetUidTempAllowlistStateRecordHandler {
             .atom_id
             .ok_or(anyhow!("atom_id required if statsd_logging_config provided"))?;
 
-        debug!("attempting to write atom id: {}", atom_id);
+        debug!("attempting to write atom id: {atom_id}");
         let mut event = AStatsEvent::new(atom_id.try_into()?);
 
         event.write_int32(data.uid.try_into()?);
         event.write_bool(data.onAllowlist);
 
         event.write();
-        debug!("successfully wrote atom id: {}", atom_id);
+        debug!("successfully wrote atom id: {atom_id}");
 
         Ok(())
     }
@@ -59,7 +59,7 @@ unsafe impl Handler for UpdateDeviceIdleTempAllowlistRecordHandler {
         task: &ResolvedTask,
         data: &UpdateDeviceIdleTempAllowlistRecord,
     ) -> Result<()> {
-        debug!("UpdateDeviceIdleTempAllowlistRecord: {:?}", data);
+        debug!("UpdateDeviceIdleTempAllowlistRecord: {data:?}");
 
         let MessageField(Some(ref statsd_logging_config)) = task.task.statsd_logging_config else {
             return Ok(());
@@ -70,7 +70,7 @@ unsafe impl Handler for UpdateDeviceIdleTempAllowlistRecordHandler {
             .atom_id
             .ok_or(anyhow!("atom_id required if statsd_logging_config provided"))?;
 
-        debug!("attempting to write atom id: {}", atom_id);
+        debug!("attempting to write atom id: {atom_id}");
         let mut event = AStatsEvent::new(atom_id.try_into()?);
 
         event.write_int32(data.changing_uid);
@@ -82,7 +82,7 @@ unsafe impl Handler for UpdateDeviceIdleTempAllowlistRecordHandler {
         event.write_int32(data.calling_uid);
 
         event.write();
-        debug!("successfully wrote atom id: {}", atom_id);
+        debug!("successfully wrote atom id: {atom_id}");
 
         Ok(())
     }

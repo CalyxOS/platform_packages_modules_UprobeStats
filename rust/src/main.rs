@@ -25,7 +25,7 @@ fn main() {
     ));
 
     if let Err(e) = main_impl() {
-        error!("{}", e);
+        error!("{e}");
         atrace_end(AtraceTag::App);
         exit(1);
     };
@@ -80,7 +80,7 @@ fn main_impl() -> Result<()> {
         for map_path in &task.bpf_map_paths {
             let task_ref = &task;
             handles.push(s.spawn(move || {
-                debug!("Spawned thread for map_path: {}", map_path);
+                debug!("Spawned thread for map_path: {map_path}");
                 bpf_map::poll_registry(map_path, task_ref, duration)
                     .map_err(|e| anyhow!("poll_registry error: {}", e))
             }));
