@@ -27,12 +27,12 @@ unsafe impl Handler for CallTimestampHandler {
             .atom_id
             .ok_or(anyhow!("atom_id required if statsd_logging_config provided"))?;
 
-        debug!("attempting to write atom id: {}", atom_id);
+        debug!("attempting to write atom id: {atom_id}");
         let mut event = AStatsEvent::new(atom_id.try_into()?);
         event.write_int32(data.event.try_into()?);
         event.write_int64(data.timestampNs.try_into()?);
         event.write();
-        debug!("successfully wrote atom id: {}", atom_id);
+        debug!("successfully wrote atom id: {atom_id}");
         Ok(())
     }
 }
@@ -61,7 +61,7 @@ unsafe impl Handler for CallResultHandler {
             .atom_id
             .ok_or(anyhow!("atom_id required if statsd_logging_config provided"))?;
 
-        debug!("attempting to write atom id: {}", atom_id);
+        debug!("attempting to write atom id: {atom_id}");
         let mut event = AStatsEvent::new(atom_id.try_into()?);
 
         for primitive_argument_position in &statsd_logging_config.primitive_argument_positions {
@@ -69,14 +69,13 @@ unsafe impl Handler for CallResultHandler {
                 (JAVA_ARGUMENT_REGISTER_OFFSET + primitive_argument_position).try_into()?;
             let primitive_argument: i32 = data.regs[register_index].try_into()?;
             debug!(
-                "writing primitive_argument: {} from position: {}",
-                primitive_argument, primitive_argument_position
+                "writing primitive_argument: {primitive_argument} from position: {primitive_argument_position}"
             );
             event.write_int32(primitive_argument);
         }
 
         event.write();
-        debug!("successfully wrote atom id: {}", atom_id);
+        debug!("successfully wrote atom id: {atom_id}");
 
         Ok(())
     }

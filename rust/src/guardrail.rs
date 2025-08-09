@@ -49,7 +49,7 @@ fn get_full_method_name(probe_config: &ProbeConfig, offsets_api_enabled: bool) -
             bail!("Fully qualified class name is empty")
         };
         let Some(ref method_name) = probe_config.method_name else { bail!("Method name is empty") };
-        Ok(format!("{}.{}", fqcn, method_name))
+        Ok(format!("{fqcn}.{method_name}"))
     } else {
         let Some(ref method_signature) = probe_config.method_signature else {
             bail!("Method signature is empty")

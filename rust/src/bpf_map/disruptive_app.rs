@@ -24,7 +24,7 @@ unsafe impl Handler for ComponentEnabledSettingHandler {
         let class_name = bytes_as_str(&data.class_name)?;
         let new_state = data.new_state;
         let calling_package_name = bytes_as_str(&data.calling_package_name)?;
-        debug!("ComponentEnabledSetting: package_name={:?}, class_name={:?}, new_state={:?}, calling_package_name={:?}", package_name, class_name, new_state, calling_package_name);
+        debug!("ComponentEnabledSetting: package_name={package_name:?}, class_name={class_name:?}, new_state={new_state:?}, calling_package_name={calling_package_name:?}");
         if new_state < COMPONENT_ENABLED_STATE_DISABLED {
             // < PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
             return Ok(());
@@ -59,8 +59,7 @@ unsafe impl Handler for BindServiceLockedHandler {
         let calling_package = bytes_as_str(&data.calling_package)?;
         let has_bal_flag = (data.bind_flags & BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS) != 0;
         debug!(
-            "BindServiceLocked: intent_package={:?}, intent_action={:?}, intent_component_name_package={:?}, intent_component_name_class={:?} flags={:?}, calling_package={:?}, has_bal_flag={}",
-            intent_package, intent_action, intent_component_name_package, intent_component_name_class, flags, calling_package, has_bal_flag
+            "BindServiceLocked: intent_package={intent_package:?}, intent_action={intent_action:?}, intent_component_name_package={intent_component_name_package:?}, intent_component_name_class={intent_component_name_class:?} flags={flags:?}, calling_package={calling_package:?}, has_bal_flag={has_bal_flag}"
         );
         if has_bal_flag {
             bind_service_locked_with_bal_flags_reported::stats_write(

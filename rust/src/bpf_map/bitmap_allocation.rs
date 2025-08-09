@@ -22,7 +22,7 @@ unsafe impl Handler for BitmapAllocationHandlerV0 {
     const MAP_PATH: &'static str = "/sys/fs/bpf/uprobestats/map_BitmapAllocation_output";
     type T = BitmapAllocation;
     fn on_item(&mut self, task: &ResolvedTask, data: &BitmapAllocation) -> Result<()> {
-        debug!("BitmapAllocation from v0 handler: {:?}", data);
+        debug!("BitmapAllocation from v0 handler: {data:?}");
         android_graphics_bitmap_allocated::stats_write(
             task.uid,
             data.width.try_into()?,
@@ -59,7 +59,7 @@ unsafe impl Handler for BitmapAllocationHandlerV1 {
     const MAP_PATH: &'static str = "/sys/fs/bpf/uprobestats/map_BitmapAllocation_output";
     type T = BitmapAllocation;
     fn on_item(&mut self, task: &ResolvedTask, data: &BitmapAllocation) -> Result<()> {
-        debug!("BitmapAllocation from v1 handler: {:?}", data);
+        debug!("BitmapAllocation from v1 handler: {data:?}");
         match data.type_ {
             0 => {
                 // Allocation
@@ -107,8 +107,7 @@ unsafe impl Handler for BitmapAllocationHandlerV1 {
             let snapshot_id = rng.gen();
             for metadata in &self.bitmap_snapshot_at_max_size {
                 debug!(
-                    "BitmapAllocationHandler.on_finished: bitmap_snapshot_at_max_size {:?}",
-                    metadata
+                    "BitmapAllocationHandler.on_finished: bitmap_snapshot_at_max_size {metadata:?}"
                 );
                 android_graphics_bitmap_allocation_snapshot::stats_write(
                     metadata.uid,
@@ -126,7 +125,7 @@ unsafe impl Handler for BitmapAllocationHandlerV1 {
         {
             let snapshot_id = rng.gen();
             for metadata in self.bitmaps.values() {
-                debug!("BitmapAllocationHandler.on_finished: random sample {:?}", metadata);
+                debug!("BitmapAllocationHandler.on_finished: random sample {metadata:?}");
                 android_graphics_bitmap_allocation_snapshot::stats_write(
                     metadata.uid,
                     metadata.width,
