@@ -21,7 +21,8 @@ use uprobestats_bpf::{
 use uprobestats_bpf_bindgen::BpfMapHandle;
 use zerocopy::{Immutable, IntoBytes};
 
-mod binder_transaction;
+/// Contains handlers and map writers for Binder transaction-related BPF maps.
+pub mod binder_transaction;
 mod bitmap_allocation;
 mod disruptive_app;
 mod generic_instrumentation;

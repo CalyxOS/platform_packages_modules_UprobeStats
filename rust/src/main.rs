@@ -56,7 +56,8 @@ fn main_impl() -> Result<()> {
 
     let task = config_resolver::resolve_single_task(config)?;
 
-    let probes = config_resolver::resolve_probes(&task)?;
+    // binder_interface_bpf_map will clear the contents of the map when it goes out of scope.
+    let (probes, _binder_interface_bpf_map) = config_resolver::resolve_probes(&task)?;
     for probe in &probes {
         debug!(
             "attaching bpf {} to {} at {}",
