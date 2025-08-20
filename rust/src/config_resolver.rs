@@ -1,4 +1,5 @@
 //! Validates uprobestats config protos and adds additional info.
+use crate::bpf_map::binder_transaction::BinderInterfaceMapAccessor;
 use crate::prefix_bpf;
 use anyhow::{anyhow, ensure, Result};
 use dynamic_instrumentation_manager::{
@@ -10,7 +11,9 @@ use std::clone::Clone;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
+use std::os::raw::c_ulong;
 use std::time::Duration;
+use uprobestats_bpf::UpdateMapElemFlags;
 use uprobestats_proto::config::{
     uprobestats_config::{
         task::{ProbeConfig, TargetProcessSelection},
@@ -93,7 +96,10 @@ pub fn resolve_single_task(config: UprobestatsConfig) -> Result<ResolvedTask> {
 }
 
 /// Validates a single probe proto and adds additional info.
-pub fn resolve_probes(resolved_task: &ResolvedTask) -> Result<Vec<ResolvedProbe>> {
+pub fn resolve_probes(
+    resolved_task: &ResolvedTask,
+) -> Result<(Vec<ResolvedProbe>, Option<BinderInterfaceMapAccessor>)> {
+    let mut binder_interface_bpf_map = None;
     let resolved_probes = resolved_task.task.probe_configs.clone().into_iter().map(|probe| {
         let bpf_name = probe.bpf_name.as_ref().ok_or_else(|| anyhow!("bpf_name is required"))?;
         ensure!(is_bpf_file_enabled(bpf_name), "{} is disabled by flag", bpf_name);
@@ -122,12 +128,22 @@ pub fn resolve_probes(resolved_task: &ResolvedTask) -> Result<Vec<ResolvedProbe>
                 .get_method_offset()
                 .try_into()
                 .map_err(|e| anyhow!("Failed to convert method offset to i32: {e}"))?;
-            Ok(ResolvedProbe {
+            let resolved_probe = ResolvedProbe {
                 _probe: probe,
                 bpf_program_path,
                 offset,
                 filename: offsets.get_container_path(),
-            })
+            };
+            if resolved_probe.bpf_program_path.contains(BINDER_BPF_PROGRAM_NAME) {
+                if binder_interface_bpf_map.is_none() {
+                    binder_interface_bpf_map = Some(BinderInterfaceMapAccessor::new()?);
+                }
+                write_binder_transaction_filter_to_binder_bpf_map(
+                    &resolved_probe,
+                    binder_interface_bpf_map.as_ref().unwrap(),
+                )?;
+            }
+            Ok(resolved_probe)
         } else {
             debug!("using oatdump to retrieve offsets");
             let method_signature =
@@ -162,7 +178,9 @@ pub fn resolve_probes(resolved_task: &ResolvedTask) -> Result<Vec<ResolvedProbe>
         }
     });
 
-    resolved_probes.collect()
+    let resolved_probes = resolved_probes.collect::<Result<Vec<_>>>()?;
+
+    Ok((resolved_probes, binder_interface_bpf_map))
 }
 
 /// Reads a config file and parses it into a UprobestatsConfig proto.
@@ -173,6 +191,33 @@ pub fn read_config(config_path: &str) -> Result<UprobestatsConfig> {
     file.read_to_end(&mut buffer).map_err(|e| anyhow!("Failed to read config file: {e}"))?;
     UprobestatsConfig::parse_from_bytes(&buffer)
         .map_err(|e| anyhow!("Failed to parse config file: {e}"))
+}
+
+const BINDER_BPF_PROGRAM_NAME: &str = "Binder_uprobe_exec_transact_internal";
+fn write_binder_transaction_filter_to_binder_bpf_map(
+    probe: &ResolvedProbe,
+    binder_interface_bpf_map: &BinderInterfaceMapAccessor,
+) -> Result<()> {
+    if probe._probe.binder_transaction_filters.is_empty() {
+        return Err(anyhow!("Binder transaction probe must have at least one filter"));
+    }
+    for binder_transaction_filter in &probe._probe.binder_transaction_filters {
+        let Some(ref interface_name) = binder_transaction_filter.interface_name else {
+            return Err(anyhow!("Binder transaction filter must have an interface name"));
+        };
+        if binder_transaction_filter.method_ids.is_empty() {
+            return Err(anyhow!("Binder transaction filter must have at least one method id"));
+        }
+        let codes: Vec<c_ulong> = binder_transaction_filter
+            .method_ids
+            .iter()
+            .map(|method_id| (*method_id).try_into())
+            .collect::<Result<Vec<_>, _>>()?;
+
+        binder_interface_bpf_map.put(interface_name, &codes, UpdateMapElemFlags::Insert)?;
+        debug!("wrote {interface_name}:{:?} to binder interface bpf map", codes);
+    }
+    Ok(())
 }
 
 fn is_bpf_file_enabled(bpf_prog_or_map_name: &str) -> bool {
@@ -186,8 +231,8 @@ fn is_bpf_file_enabled(bpf_prog_or_map_name: &str) -> bool {
     } else if bpf_prog_or_map_name.contains("BitmapAllocation") {
         uprobestats_mainline_flags_rust::enable_bitmap_instrumentation()
             || uprobestats_mainline_flags_rust::enable_bitmap_snapshot()
-    } else if bpf_prog_or_map_name.contains("BinderExecTransactInternal") {
-        uprobestats_mainline_flags_rust::enable_binder_transaction_poc()
+    } else if bpf_prog_or_map_name.contains("Binder") {
+        uprobestats_mainline_flags_rust::enable_binder_transaction()
     } else {
         true
     }

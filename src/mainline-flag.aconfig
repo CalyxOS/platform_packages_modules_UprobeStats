@@ -56,3 +56,10 @@ flag {
     bug: "408255571"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "enable_binder_transaction"
+    namespace: "responsible_apis"
+    description: "Whether to enable the binder transaction instrumentation"
+    bug: "427180586"
+}

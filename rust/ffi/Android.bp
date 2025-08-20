@@ -4,6 +4,7 @@ rust_library {
     defaults: ["uprobestats_rust_defaults"],
     srcs: ["bpf.rs"],
     rustlibs: [
+        "liblibc",
         "liblog_rust",
         "libuprobestats_bpf_bindgen",
     ],

@@ -18,7 +18,7 @@ package test;
 
 import static android.uprobestats.flags.Flags.FLAG_ENABLE_UPROBESTATS;
 import static android.uprobestats.flags.Flags.FLAG_EXECUTABLE_METHOD_FILE_OFFSETS;
-import static android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BINDER_TRANSACTION_POC;
+import static android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BINDER_TRANSACTION;
 import static android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BITMAP_INSTRUMENTATION;
 import static android.uprobestats.mainline.flags.Flags.FLAG_ENABLE_BITMAP_SNAPSHOT;
 import static android.uprobestats.mainline.flags.Flags.FLAG_UPROBESTATS_MONITOR_DISRUPTIVE_APP_ACTIVITIES;
@@ -40,13 +40,11 @@ import android.platform.test.flag.junit.host.HostFlagsValueProvider;
 
 import com.android.compatibility.common.util.CpuFeatures;
 import com.android.os.StatsLog;
-import com.android.os.uprobestats.AndroidGraphicsBitmapAllocated;
 import com.android.os.uprobestats.AndroidGraphicsBitmapAllocationSnapshot;
 import com.android.os.uprobestats.BindServiceLockedWithBalFlagsReported;
 import com.android.os.uprobestats.SetComponentEnabledSettingReported;
 import com.android.os.uprobestats.TestUprobeStatsAtomReported;
 import com.android.os.uprobestats.UprobestatsExtensionAtoms;
-
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.testtype.DeviceJUnit4ClassRunner;
 import com.android.tradefed.testtype.junit4.BaseHostJUnit4Test;
@@ -55,15 +53,14 @@ import com.android.tradefed.util.RunUtil;
 import com.google.protobuf.ExtensionRegistry;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import java.util.stream.Collectors;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @RunWith(DeviceJUnit4ClassRunner.class)
@@ -320,11 +317,10 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
     }
 
     @Test
-    @Ignore // TODO(mattgilbride): re-enable once the test app is fixed
     @RequiresFlagsEnabled({
         FLAG_ENABLE_UPROBESTATS,
         FLAG_EXECUTABLE_METHOD_FILE_OFFSETS,
-        FLAG_ENABLE_BINDER_TRANSACTION_POC,
+        FLAG_ENABLE_BINDER_TRANSACTION
     })
     public void binderTransaction() throws Exception {
         assumeTrue(CpuFeatures.isArm64(getDevice()));
@@ -335,12 +331,9 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
                 BINDER_TRANSACTION_CONFIG,
                 UprobestatsExtensionAtoms.TEST_UPROBESTATS_ATOM_REPORTED_FIELD_NUMBER);
 
-        getDevice()
-                .executeShellCommand( // TODO(mattgilbride): use a separate test app
-                        "killall -9 com.android.uprobestats.disruptive");
-        getDevice()
-                .executeShellCommand(
-                        "am start -n" + " com.android.uprobestats.disruptive/.TestActivity");
+        // Should trigger IBatteryStats#noteStartSensor
+        DeviceUtils.turnScreenOff(getDevice());
+        DeviceUtils.turnScreenOn(getDevice());
 
         // Allow UprobeStats/StatsD time to collect metric
         RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
@@ -348,7 +341,7 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
         // See if the atom made it
         List<StatsLog.EventMetricData> data =
                 ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
-        assertThat(data.size()).isEqualTo(1);
+        assertThat(data.size()).isGreaterThan(0);
 
         TestUprobeStatsAtomReported reported =
                 data.get(0)

@@ -111,7 +111,18 @@ struct BitmapAllocation {
 };
 
 struct BinderTransaction {
+  char interface_descriptor[MAX_STRING_LENGTH];
+  unsigned long code;
   int calling_uid;
+  unsigned long timestamp_ns;
+};
+
+struct BinderInterfaceBpfMapKey {
+  char interface_descriptor[MAX_STRING_LENGTH];
+};
+
+struct BinderCodesBpfMapValue {
+  unsigned long codes[10];
 };
 
 __END_DECLS

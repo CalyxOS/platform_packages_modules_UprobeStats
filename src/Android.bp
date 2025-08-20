@@ -55,7 +55,18 @@ java_aconfig_library {
     name: "uprobestats_mainline_flags_java_lib",
     aconfig_declarations: "uprobestats_mainline_flags",
     sdk_version: "current",
+    visibility: [
+        "//cts/hostsidetests/statsdatom:__subpackages__",
+        "//packages/modules/UprobeStats:__subpackages__",
+    ],
+}
+
+java_aconfig_library {
+    name: "uprobestats_mainline_flags_java_lib_test_host",
+    aconfig_declarations: "uprobestats_mainline_flags",
+    sdk_version: "current",
     host_supported: true,
+    mode: "test",
     visibility: [
         "//cts/hostsidetests/statsdatom:__subpackages__",
         "//packages/modules/UprobeStats:__subpackages__",

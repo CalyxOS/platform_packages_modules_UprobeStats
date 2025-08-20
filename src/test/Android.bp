@@ -34,7 +34,7 @@ java_test_host {
         "perfetto_config-full",
         "art_flags_uprobestats_java_lib",
         "uprobestats_flags_java_lib",
-        "uprobestats_mainline_flags_java_lib",
+        "uprobestats_mainline_flags_java_lib_test_host",
         "uprobestats-protos",
     ],
     proto: {
