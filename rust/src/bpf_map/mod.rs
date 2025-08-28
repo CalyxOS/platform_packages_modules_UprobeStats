@@ -189,7 +189,7 @@ static HANDLER_REGISTRY: LazyLock<HandlerRegistry> = LazyLock::new(|| {
     } else {
         register_handler::<BitmapAllocationHandlerV0>(&mut map);
     }
-    if uprobestats_mainline_flags_rust::enable_binder_transaction_poc() {
+    if uprobestats_mainline_flags_rust::enable_binder_transaction() {
         register_handler::<BinderTransactionHandler>(&mut map);
     }
     register_handler::<CallTimestampHandler>(&mut map);
