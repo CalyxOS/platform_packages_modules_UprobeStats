@@ -92,10 +92,3 @@ systemserverclasspath_fragment {
     standalone_contents: ["service-uprobestats"],
     apex_available: ["com.android.uprobestats"],
 }
-
-sdk {
-    name: "uprobestats-module-sdk",
-    apexes: [
-        "com.android.uprobestats",
-    ],
-}
