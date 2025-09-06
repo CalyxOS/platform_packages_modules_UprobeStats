@@ -50,6 +50,13 @@ flag {
 }
 
 flag {
+    name: "use_process_observer_api"
+    namespace: "system_performance"
+    description: "Whether to use the ProcessObserver API to monitor process start events."
+    bug: "408255571"
+}
+
+flag {
     name: "enable_binder_transaction"
     namespace: "responsible_apis"
     description: "Whether to enable the binder transaction instrumentation"
