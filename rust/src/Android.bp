@@ -5,6 +5,7 @@ rust_library {
     srcs: ["lib.rs"],
     rustlibs: [
         "libactivity_manager_rs",
+        "libbinder_rs",
         "libdynamic_instrumentation_manager",
         "liblog_rust",
         "liblogger",
@@ -54,6 +55,7 @@ rust_test {
     rustlibs: [
         "libuprobestats_rs",
         "libactivity_manager_rs",
+        "libbinder_rs",
         "libdynamic_instrumentation_manager",
         "liblog_rust",
         "liblogger",
