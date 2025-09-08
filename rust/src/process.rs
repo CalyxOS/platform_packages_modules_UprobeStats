@@ -1,7 +1,7 @@
 //! Utils for dealing with processes
 use crate::{bpf_map::bytes_as_str, prefix_bpf, Timer};
 use activity_manager::{ProcessObserver, ProcessObserverCallbacks};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use dynamic_instrumentation_manager::{
     ExecutableMethodFileOffsets, MethodDescriptor, TargetProcess,
 };
@@ -188,7 +188,8 @@ fn get_ProcessRecord_makeActive_offsets() -> Result<ExecutableMethodFileOffsets>
             METHOD_MAKE_ACTIVE,
             METHOD_MAKE_ACTIVE_PARAMS.into_iter().map(String::from),
         )?,
-    )?;
+    )
+    .context("Failed to get offsets for ProcessRecord#makeActive")?;
     offsets.ok_or(anyhow!("Could not find offsets for ProcessRecord#makeActive"))
 }
 
@@ -201,7 +202,8 @@ fn get_onProcessActive_offsets() -> Result<ExecutableMethodFileOffsets> {
             METHOD_ON_PROCESS_ACTIVE,
             METHOD_ON_PROCESS_ACTIVE_PARAMS.into_iter().map(String::from),
         )?,
-    )?;
+    )
+    .context("Failed to get offsets for ProcessProfileRecord#onProcessActive")?;
     offsets.ok_or(anyhow!("Could not find offsets for ProcessProfileRecord#onProcessActive"))
 }
 
