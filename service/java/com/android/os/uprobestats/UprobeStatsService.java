@@ -35,7 +35,7 @@ public class UprobeStatsService extends SystemService {
 
     public UprobeStatsService(@NonNull Context context) {
         super(context);
-        mUprobeStatsServiceImpl = new UprobeStatsServiceImpl();
+        mUprobeStatsServiceImpl = new UprobeStatsServiceImpl(context);
     }
 
     @Override

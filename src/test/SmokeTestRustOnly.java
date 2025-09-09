@@ -65,7 +65,6 @@ import java.util.stream.Stream;
 
 @RunWith(DeviceJUnit4ClassRunner.class)
 public class SmokeTestRustOnly extends BaseHostJUnit4Test {
-    private static final String TEST_MALWARE_SIGNAL_CONFIG = "disruptive_app.textproto";
     private static final String BITMAP_ALLOCATION_CONFIG = "bitmap.textproto";
     private static final String BITMAP_ALLOCATION_SNAPSHOT_CONFIG = "bitmap_snapshot.textproto";
     private static final String BITMAP_TESTAPP_PACKAGE_NAME = "com.android.uprobestats.bitmap";
@@ -80,69 +79,6 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
     public void setUp() throws Exception {
         mRegistry = initializeStatsD(getDevice());
         initializeUprobeStats(getDevice());
-    }
-
-    @Test
-    @RequiresFlagsEnabled({
-        FLAG_ENABLE_UPROBESTATS,
-        FLAG_EXECUTABLE_METHOD_FILE_OFFSETS,
-        FLAG_UPROBESTATS_MONITOR_DISRUPTIVE_APP_ACTIVITIES,
-    })
-    public void disruptiveAppActivity() throws Exception {
-        assumeTrue(CpuFeatures.isArm64(getDevice()));
-
-        configureStatsDAndStartUprobeStats(
-                getClass(),
-                getDevice(),
-                TEST_MALWARE_SIGNAL_CONFIG,
-                UprobestatsExtensionAtoms.SET_COMPONENT_ENABLED_SETTING_REPORTED_FIELD_NUMBER,
-                UprobestatsExtensionAtoms.BIND_SERVICE_LOCKED_WITH_BAL_FLAGS_REPORTED_FIELD_NUMBER);
-
-        // enable and disable a component (need one that will definitely exist, but not in
-        // android/com.android namespace)
-        getDevice()
-                .executeShellCommand(
-                        "pm disable" + " com.android.uprobestats.disruptive/.TestActivity");
-        getDevice()
-                .executeShellCommand(
-                        "pm enable" + " com.android.uprobestats.disruptive/.TestActivity");
-
-        getDevice()
-                .executeShellCommand(
-                        "am start -n" + " com.android.uprobestats.disruptive/.TestActivity");
-
-        // Allow UprobeStats/StatsD time to collect metric
-        RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
-
-        // See if the atom made it
-        List<StatsLog.EventMetricData> data =
-                ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
-        assertThat(data.size()).isEqualTo(2);
-
-        SetComponentEnabledSettingReported reported =
-                data.get(0)
-                        .getAtom()
-                        .getExtension(UprobestatsExtensionAtoms.setComponentEnabledSettingReported);
-        assertThat(reported.getNewState())
-                .isEqualTo(2); // PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
-        assertThat(reported.getPackageName()).isEqualTo("com.android.uprobestats.disruptive");
-        assertThat(reported.getClassName())
-                .isEqualTo("com.android.uprobestats.disruptive.TestActivity");
-        assertThat(reported.getCallingPackageName()).isEqualTo("shell");
-
-        BindServiceLockedWithBalFlagsReported balReported =
-                data.get(1)
-                        .getAtom()
-                        .getExtension(
-                                UprobestatsExtensionAtoms.bindServiceLockedWithBalFlagsReported);
-        assertThat(balReported.getCallingPackageName())
-                .isEqualTo("com.android.uprobestats.disruptive");
-        assertThat(balReported.getFlags())
-                .isEqualTo(1048576); // Context.BIND_ALLOW_BACKGROUND_ACTIVITY_STARTS
-        assertThat(balReported.getIntentPackageName()).isEqualTo("");
-        assertThat(balReported.getIntentAction()).isEqualTo("");
-        assertThat(balReported.getIntentComponentNamePackage()).isNotEmpty();
-        assertThat(balReported.getIntentComponentNameClass()).isNotEmpty();
     }
 
     @Test

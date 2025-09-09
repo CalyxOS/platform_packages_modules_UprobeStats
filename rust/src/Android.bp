@@ -19,6 +19,7 @@ rust_library {
         "libstatssocket_rs",
         "libuprobestats_mainline_flags_rust",
         "libzerocopy",
+        "uprobestats-service-aidl-rust",
     ],
     shared_libs: ["libuprobestats_bpf_cc"],
 }
@@ -69,5 +70,6 @@ rust_test {
         "librustutils",
         "libserde_json",
         "libzerocopy",
+        "uprobestats-service-aidl-rust",
     ],
 }

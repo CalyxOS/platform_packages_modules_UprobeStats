@@ -32,5 +32,8 @@ aidl_interface {
         java: {
             apex_available: ["com.android.uprobestats"],
         },
+        rust: {
+            apex_available: ["com.android.uprobestats"],
+        },
     },
 }

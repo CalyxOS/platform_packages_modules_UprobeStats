@@ -10,6 +10,12 @@ filegroup {
         true: [],
         false: [
             "SmokeTestRustOnly.java",
+            "SmokeTestUprobeStatsService.java",
+        ],
+    }) + select(release_flag("RELEASE_UPROBESTATS_SERVICE"), {
+        true: [],
+        false: [
+            "SmokeTestUprobeStatsService.java",
         ],
     }),
 }

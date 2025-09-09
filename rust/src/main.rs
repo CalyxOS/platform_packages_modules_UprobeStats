@@ -12,7 +12,7 @@ use std::{
     time::Duration,
 };
 use uprobestats_bpf::bpf_perf_event_open;
-use uprobestats_rs::{bpf_map, config_resolver, guardrail};
+use uprobestats_rs::{bpf_map, config_resolver, guardrail, is_user_build};
 
 fn main() {
     atrace_begin(AtraceTag::App, "uprobestats_rs::main");
@@ -102,13 +102,6 @@ fn main_impl() -> Result<()> {
     debug!("done");
 
     Ok(())
-}
-
-fn is_user_build() -> bool {
-    if let Ok(Some(val)) = system_properties::read("ro.build.type") {
-        return val == "user";
-    }
-    true
 }
 
 fn level_filter_from_property_or_info(property: &str) -> LevelFilter {
