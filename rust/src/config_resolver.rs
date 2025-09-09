@@ -1,7 +1,8 @@
-//! Validates uprobestats config protos and adds additional info.
+//! Resolves UprobestatsConfig protos into a list of concrete probes to be attached.
 use crate::bpf_map::binder_transaction::BinderInterfaceMapAccessor;
 use crate::prefix_bpf;
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
+use binder::ExceptionCode;
 use dynamic_instrumentation_manager::{
     ExecutableMethodFileOffsets, MethodDescriptor, TargetProcess,
 };
@@ -12,8 +13,10 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::Read;
 use std::os::raw::c_ulong;
+use std::thread;
 use std::time::Duration;
 use uprobestats_bpf::UpdateMapElemFlags;
+use uprobestats_mainline_flags_rust as uprobestats_flags;
 use uprobestats_proto::config::{
     uprobestats_config::{
         task::{ProbeConfig, TargetProcessSelection},
@@ -23,6 +26,47 @@ use uprobestats_proto::config::{
 };
 
 use crate::{art::get_method_offset_from_oatdump, process::resolve_process};
+
+pub(crate) fn get_executable_method_file_offsets_with_retry(
+    target_process: &TargetProcess,
+    method_descriptor: &MethodDescriptor,
+) -> Result<Option<ExecutableMethodFileOffsets>> {
+    if !uprobestats_flags::use_process_observer_api() {
+        return ExecutableMethodFileOffsets::get(target_process, method_descriptor)
+            .map_err(|e| anyhow!("Failed to get executable method file offsets: {}", e));
+    }
+
+    let mut retries = 0;
+    const MAX_RETRIES: u32 = 5;
+    let mut backoff = Duration::from_millis(10);
+
+    loop {
+        match ExecutableMethodFileOffsets::get(target_process, method_descriptor) {
+            Ok(offsets) => return Ok(offsets),
+            Err(status) => {
+                if retries >= MAX_RETRIES {
+                    bail!("Failed after {} retries, last error: {}", MAX_RETRIES, status);
+                }
+                if status.exception_code() != ExceptionCode::SERVICE_SPECIFIC {
+                    bail!("Unexpected status: {status}");
+                }
+                if status.service_specific_error() != ExceptionCode::ILLEGAL_STATE as i32 {
+                    bail!("Unexpected service specific error: {status}");
+                }
+                log::warn!(
+                    "Failed to get method offsets (attempt {}/{}), retrying in {:?}: {}",
+                    retries + 1,
+                    MAX_RETRIES,
+                    backoff,
+                    status
+                );
+                thread::sleep(backoff);
+                retries += 1;
+                backoff *= 2;
+            }
+        }
+    }
+}
 
 /// Validated probe proto + probe target's code filename and offset.
 pub struct ResolvedProbe {
@@ -109,7 +153,7 @@ pub fn resolve_probes(
             let method_name =
                 probe.method_name.clone().ok_or_else(|| anyhow!("method_name is required"))?;
             let fully_qualified_parameters = probe.fully_qualified_parameters.clone();
-            let offsets = ExecutableMethodFileOffsets::get(
+            let offsets = get_executable_method_file_offsets_with_retry(
                 &TargetProcess::new(
                     resolved_task.uid.try_into()?,
                     resolved_task.pid,

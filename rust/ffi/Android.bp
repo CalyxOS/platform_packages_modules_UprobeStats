@@ -47,6 +47,7 @@ rust_library {
     crate_name: "dynamic_instrumentation_manager",
     srcs: ["dynamic_instrumentation_manager.rs"],
     rustlibs: [
+        "libbinder_rs",
         "libdynamic_instrumentation_manager_bindgen",
     ],
 }

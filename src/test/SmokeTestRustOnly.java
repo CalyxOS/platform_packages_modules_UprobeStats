@@ -173,6 +173,9 @@ public class SmokeTestRustOnly extends BaseHostJUnit4Test {
             // Allow UprobeStats/StatsD time to collect metric
             RunUtil.getDefault().sleep(AtomTestUtils.WAIT_TIME_LONG);
 
+            // Wait until the uprobestats process exits.
+            waitForUprobeStatsToExit(35);
+
             // See if the atom made it
             List<StatsLog.EventMetricData> data =
                     ReportUtils.getEventMetricDataList(getDevice(), mRegistry);
