@@ -30,6 +30,7 @@ aidl_interface {
     min_sdk_version: "36",
     backend: {
         java: {
+            additional_libs: ["framework-annotations-lib"],
             apex_available: ["com.android.uprobestats"],
         },
         rust: {

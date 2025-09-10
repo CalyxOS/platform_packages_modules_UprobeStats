@@ -16,6 +16,7 @@
 
 package com.android.os.uprobestats;
 
+import android.annotation.RequiresNoPermission;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -40,6 +41,7 @@ public final class UprobeStatsServiceImpl extends IUprobeStatsService.Stub {
     }
 
     @Override
+    @RequiresNoPermission
     public boolean isLauncherActivity(String packageName, String className, boolean matchDisabled) {
         final Intent intent = new Intent(Intent.ACTION_MAIN);
         intent.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -61,6 +63,7 @@ public final class UprobeStatsServiceImpl extends IUprobeStatsService.Stub {
     }
 
     @Override
+    @RequiresNoPermission
     public int getUidForPackage(String packageName) {
         try {
             return mContext.getPackageManager().getPackageUid(packageName, 0);
