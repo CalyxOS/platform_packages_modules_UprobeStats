@@ -16,11 +16,60 @@
 
 package com.android.os.uprobestats;
 
+import android.annotation.RequiresNoPermission;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.util.Log;
+
+import java.util.List;
+
 /**
  * Implementation of {@link IUprobeStatsService} binder service.
  *
  * @hide
  */
 public final class UprobeStatsServiceImpl extends IUprobeStatsService.Stub {
-    // Implement methods here.
+    private static final String TAG = "UprobeStatsService";
+    private final Context mContext;
+
+    public UprobeStatsServiceImpl(Context context) {
+        super();
+        mContext = context;
+    }
+
+    @Override
+    @RequiresNoPermission
+    public boolean isLauncherActivity(String packageName, String className, boolean matchDisabled) {
+        final Intent intent = new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        intent.setPackage(packageName);
+
+        int flags = matchDisabled ? PackageManager.MATCH_DISABLED_COMPONENTS : 0;
+
+        PackageManager pm = mContext.getPackageManager();
+        List<ResolveInfo> activities =
+                pm.queryIntentActivities(intent, flags);
+
+        for (ResolveInfo resolveInfo : activities) {
+            if (resolveInfo.activityInfo.name.equals(className)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Override
+    @RequiresNoPermission
+    public int getUidForPackage(String packageName) {
+        try {
+            return mContext.getPackageManager().getPackageUid(packageName, 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            Log.e(TAG, "Package not found: " + packageName);
+            return -1;
+        }
+    }
 }

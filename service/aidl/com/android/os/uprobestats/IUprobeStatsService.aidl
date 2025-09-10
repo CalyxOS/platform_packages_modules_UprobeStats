@@ -22,5 +22,23 @@
  * {@hide}
  */
 interface IUprobeStatsService {
-
+  /**
+   * Returns true if the given package name and class name represent a launcher activity.
+   *
+   * @param packageName The package name of the activity.
+   * @param className The class name of the activity.
+   * @param matchDisabled Whether to match disabled components.
+   * @return True if the given package name and class name represent a launcher activity.
+   */
+  @RequiresNoPermission
+  boolean isLauncherActivity(in String packageName, in String className, boolean matchDisabled);
+  /**
+   * Returns the uid for the given package name. If the package name is not found
+   * (e.g. a system package like "shell" is passed), returns -1.
+   *
+   * @param packageName The package name of the package.
+   * @return The uid for the given package name.
+   */
+  @RequiresNoPermission
+  int getUidForPackage(in String packageName);
 }
